@@ -1,0 +1,34 @@
+{
+  "name": "ykh5p",
+  "version": "0.1.0",
+  "description": "youku html5 player +",
+  "main": "ykh5p.user.js",
+  "scripts": {
+    "lint": "eslint ykh5p.user.js",
+    "prebuild": "npm run lint",
+    "build": "babel ykh5p.user.js -o ykh5p.dist.user.js",
+    "precommit": "npm run lint"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gooyie/ykh5p.git"
+  },
+  "keywords": [
+    "userscript",
+    "html5",
+    "youku",
+    "player"
+  ],
+  "author": "gooyie",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/gooyie/ykh5p/issues"
+  },
+  "homepage": "https://github.com/gooyie/ykh5p#readme",
+  "devDependencies": {
+    "babel-cli": "^6.24.1",
+    "babel-preset-es2015": "^6.24.1",
+    "eslint": "^3.19.0",
+    "husky": "^0.13.4"
+  }
+}
