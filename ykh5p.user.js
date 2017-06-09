@@ -4,7 +4,7 @@
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.2.1
+// @version      0.2.2
 // @description  youku html5 player +
 // @author       gooyie
 // @license      MIT License
@@ -217,9 +217,14 @@
         sessionStorage.setItem('P_l_h5', 1);
     }
 
+    function recoverPlayer() {
+        sessionStorage.removeItem('P_l_h5');
+    }
+
 //=============================================================================
 
     enableH5Player();
+    window.addEventListener('unload', () => recoverPlayer()); // 禁用脚本刷新页面可恢复播放器
 
     Blocker.blockAd();
     Mocker.mockVip();
