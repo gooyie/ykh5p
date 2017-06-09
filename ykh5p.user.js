@@ -110,6 +110,14 @@
             this.hookCall(undefined, (...args) => {if (this._isSkinsViewRenderCall(args)) cb(args[2]);});
         }
 
+        static _isH5PlayerCoreFactoryCall(exports = {}) {
+            return exports instanceof Object && exports.hasOwnProperty('YoukuH5PlayerCore');
+        }
+
+        static hookH5PlayerCore(cb = ()=>{}) {
+            this.hookFactoryCall((...args) => {if (this._isH5PlayerCoreFactoryCall(args[2].exports)) cb(args[2].exports);});
+        }
+
     }
 
     class Mocker {
@@ -142,6 +150,28 @@
                     width: 300px !important;
                 }
             `);
+
+        }
+
+        static patchQualityFallback() {
+            Hooker.hookH5PlayerCore((exports) => {
+                exports.YoukuH5PlayerCore.prototype._initControlInfo = function() {
+                    if (!this._videoInfo.langcodes) return;
+
+                    const control = this.control;
+                    if (!control.lang || !this._videoInfo.langcodes.includes(control.lang)) {
+                        control.lang = this._videoInfo.langcodes[0];
+                    }
+
+                    const hdcodes = this._videoInfo.hdList[control.lang].hdcodes;
+                    if (!hdcodes.includes(control.hd)) { // 如果设置的优先画质在当前播放的视频里没有
+                        control.hd = hdcodes[hdcodes.length - 1]; // 向下选择最高画质（原逻辑是给最渣画质！）
+                    }
+
+                    control.autoplay = control.autoplay || false;
+                    control.fullscreen = control.fullscreen || false;
+                };
+            });
         }
 
     }
@@ -156,5 +186,6 @@
 
     Mocker.mockVip();
     Patcher.patchQualitySetting();
+    Patcher.patchQualityFallback();
 
 })();
