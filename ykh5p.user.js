@@ -26,7 +26,8 @@
         }
 
         static log(...args) {
-            console.log(this.tag + args.shift(), ...args);
+            console.log('%c' + this.tag + '%c' + args.shift(),
+                'color: #fff; background: #2FB3FF', '', ...args);
         }
 
         static info(...args) {
