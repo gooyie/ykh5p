@@ -127,7 +127,7 @@
 
     class Patcher {
 
-        static patchDefaultVideoType() {
+        static patchQualitySetting() {
             Hooker.hookSkinsViewRender((elem) => {
                 let autoRe = /<spvdiv\s+customer="auto"[^<>]*>自动<\/spvdiv>/;
                 let mp4Re = /<spvdiv\s+customer="mp4"[^<>]*>标清<\/spvdiv>/;
@@ -154,6 +154,6 @@
     enableH5Player();
 
     Mocker.mockVip();
-    Patcher.patchDefaultVideoType();
+    Patcher.patchQualitySetting();
 
 })();
