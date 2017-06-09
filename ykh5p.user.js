@@ -110,6 +110,24 @@
             this.hookCall(undefined, (...args) => {if (this._isSkinsViewRenderCall(args)) cb(args[2]);});
         }
 
+        static _isUtilFactoryCall(exports = {}) {
+            return exports.hasOwnProperty('getJsonp') && exports.TAG === 'util';
+        }
+
+        static hookUtil(cb = ()=>{}) {
+            this.hookFactoryCall((...args) => {if (this._isUtilFactoryCall(args[2].exports)) cb(args[2].exports);});
+        }
+
+        static hookGetJsonp(cb = ()=>{}) {
+            this.hookUtil((exports) => {
+                const getJsonp = exports.getJsonp.bind(exports);
+                exports.getJsonp = function(...args) { // url, onload, onerror, ontimeout, timeout
+                    if (cb(args)) return; // hijack
+                    getJsonp(...args);
+                };
+            });
+        }
+
         static _isH5PlayerCoreFactoryCall(exports = {}) {
             return exports instanceof Object && exports.hasOwnProperty('YoukuH5PlayerCore');
         }
@@ -128,6 +146,25 @@
                     data.user.vip = true;
                 } else {
                     data.user = {vip: true};
+                }
+            });
+        }
+
+    }
+
+    class Blocker {
+
+        static _isAdReq(url) {
+            return /atm\.youku\.com/.test(url);
+        }
+
+        static blockAd() {
+            Hooker.hookGetJsonp((args) => {
+                let [url, /* onload */, onerror] = args;
+                if (this._isAdReq(url)) {
+                    setTimeout(onerror, 0); // async invoke
+                    Logger.log('blocked ad request', url);
+                    return true;
                 }
             });
         }
@@ -184,6 +221,7 @@
 
     enableH5Player();
 
+    Blocker.blockAd();
     Mocker.mockVip();
     Patcher.patchQualitySetting();
     Patcher.patchQualityFallback();
