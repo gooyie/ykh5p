@@ -136,6 +136,16 @@
             this.hookFactoryCall((...args) => {if (this._isH5PlayerCoreFactoryCall(args[2].exports)) cb(args[2].exports);});
         }
 
+        static hookRealStartPlay(cb = ()=>{}) {
+            this.hookH5PlayerCore((exports) => {
+                const _realStartPlay = exports.YoukuH5PlayerCore.prototype._realStartPlay;
+                exports.YoukuH5PlayerCore.prototype._realStartPlay = function(...args) {
+                    cb(this, args);
+                    _realStartPlay.apply(this, args);
+                };
+            });
+        }
+
     }
 
     class Mocker {
@@ -211,6 +221,21 @@
             });
         }
 
+        static patchVolumeMemory() {
+            Hooker.hookRealStartPlay((that) => {
+                if (0 === parseFloat(localStorage.getItem('spv_volume'))) {
+                    that.UIControl.__proto__.mute.apply(that.UIControl);
+                } else {
+                    that.UIControl.__proto__.nomute.apply(that.UIControl);
+                }
+
+                that.EventManager.on('VolumeChange', (data) => {
+                    localStorage.setItem('spv_volume', data.value);
+                });
+
+            });
+        }
+
     }
 
     function enableH5Player() {
@@ -230,5 +255,6 @@
     Mocker.mockVip();
     Patcher.patchQualitySetting();
     Patcher.patchQualityFallback();
+    Patcher.patchVolumeMemory();
 
 })();
