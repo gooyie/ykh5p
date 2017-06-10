@@ -12,7 +12,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.2.2
+// @version      0.3.0
 // @description  youku html5 player +
 // @author       gooyie
 // @license      MIT License
@@ -275,6 +275,23 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     if (_this5._isH5PlayerCoreFactoryCall(args[2].exports)) cb(args[2].exports);
                 });
             }
+        }, {
+            key: 'hookRealStartPlay',
+            value: function hookRealStartPlay() {
+                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+
+                this.hookH5PlayerCore(function (exports) {
+                    var _realStartPlay = exports.YoukuH5PlayerCore.prototype._realStartPlay;
+                    exports.YoukuH5PlayerCore.prototype._realStartPlay = function () {
+                        for (var _len13 = arguments.length, args = Array(_len13), _key13 = 0; _key13 < _len13; _key13++) {
+                            args[_key13] = arguments[_key13];
+                        }
+
+                        cb(this, args);
+                        _realStartPlay.apply(this, args);
+                    };
+                });
+            }
         }]);
 
         return Hooker;
@@ -294,6 +311,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     } else {
                         data.user = { vip: true };
                     }
+                    Logger.log('解除会员画质限制');
                 });
             }
         }]);
@@ -348,6 +366,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     var autoDiv = autoRe.exec(elem.innerHTML)[0];
                     var hd3Div = autoDiv.replace('auto', 'mp4hd3').replace('自动', '1080P');
                     elem.innerHTML = elem.innerHTML.replace(autoRe, hd3Div).replace(mp4Re, '$&' + autoDiv);
+                    Logger.log('设置里优先画质增加1080P选项并对齐到当前画质');
                 });
 
                 GM_addStyle('\n                spvdiv.spv_setting_1080, spvdiv.spv_setting_panel {\n                    width: 300px !important;\n                }\n            ');
@@ -356,6 +375,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             key: 'patchQualityFallback',
             value: function patchQualityFallback() {
                 Hooker.hookH5PlayerCore(function (exports) {
+                    var SHOWHD = new Map([['flvhd', '标清'], ['3gphd', '标清'], ['mp4hd', '高清'], ['mp4hd2', '超清'], ['mp4hd3', '1080p']]);
+
                     exports.YoukuH5PlayerCore.prototype._initControlInfo = function () {
                         if (!this._videoInfo.langcodes) return;
 
@@ -367,12 +388,31 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         var hdcodes = this._videoInfo.hdList[control.lang].hdcodes;
                         if (!hdcodes.includes(control.hd)) {
                             // 如果设置的优先画质在当前播放的视频里没有
+                            var hd = control.hd;
                             control.hd = hdcodes[hdcodes.length - 1]; // 向下选择最高画质（原逻辑是给最渣画质！）
+                            Logger.log('\u4F18\u5148\u753B\u8D28\uFF08' + SHOWHD.get(hd) + '\uFF09\u5728\u5F53\u524D\u64AD\u653E\u7684\u89C6\u9891\u91CC\u6CA1\u6709\uFF0C\u5411\u4E0B\u9009\u62E9\u6700\u9AD8\u753B\u8D28\uFF08' + SHOWHD.get(control.hd) + '\uFF09\u3002');
                         }
 
                         control.autoplay = control.autoplay || false;
                         control.fullscreen = control.fullscreen || false;
                     };
+                });
+            }
+        }, {
+            key: 'patchVolumeMemory',
+            value: function patchVolumeMemory() {
+                Hooker.hookRealStartPlay(function (that) {
+                    if (0 === parseFloat(localStorage.getItem('spv_volume'))) {
+                        that.UIControl.__proto__.mute.apply(that.UIControl);
+                    } else {
+                        that.UIControl.__proto__.nomute.apply(that.UIControl);
+                    }
+
+                    that.EventManager.on('VolumeChange', function (data) {
+                        localStorage.setItem('spv_volume', data.value);
+                    });
+
+                    Logger.log('开启音量记忆');
                 });
             }
         }]);
@@ -382,10 +422,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
     function enableH5Player() {
         sessionStorage.setItem('P_l_h5', 1);
+        Logger.log('启用html5播放器');
     }
 
     function recoverPlayer() {
         sessionStorage.removeItem('P_l_h5');
+        Logger.log('恢复原播放器');
     }
 
     //=============================================================================
@@ -399,4 +441,5 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
     Mocker.mockVip();
     Patcher.patchQualitySetting();
     Patcher.patchQualityFallback();
+    Patcher.patchVolumeMemory();
 })();
