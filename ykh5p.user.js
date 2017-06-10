@@ -157,6 +157,7 @@
                 } else {
                     data.user = {vip: true};
                 }
+                Logger.log('解除会员画质限制');
             });
         }
 
@@ -190,6 +191,7 @@
                 let autoDiv = autoRe.exec(elem.innerHTML)[0];
                 let hd3Div = autoDiv.replace('auto', 'mp4hd3').replace('自动', '1080P');
                 elem.innerHTML = elem.innerHTML.replace(autoRe, hd3Div).replace(mp4Re, `$&${autoDiv}`);
+                Logger.log('设置里优先画质增加1080P选项并对齐到当前画质');
             });
 
             GM_addStyle(`
@@ -197,11 +199,18 @@
                     width: 300px !important;
                 }
             `);
-
         }
 
         static patchQualityFallback() {
             Hooker.hookH5PlayerCore((exports) => {
+                const SHOWHD = new Map([
+                    ['flvhd', '标清'],
+                    ['3gphd', '标清'],
+                    ['mp4hd', '高清'],
+                    ['mp4hd2', '超清'],
+                    ['mp4hd3', '1080p'],
+                ]);
+
                 exports.YoukuH5PlayerCore.prototype._initControlInfo = function() {
                     if (!this._videoInfo.langcodes) return;
 
@@ -212,7 +221,9 @@
 
                     const hdcodes = this._videoInfo.hdList[control.lang].hdcodes;
                     if (!hdcodes.includes(control.hd)) { // 如果设置的优先画质在当前播放的视频里没有
+                        let hd = control.hd;
                         control.hd = hdcodes[hdcodes.length - 1]; // 向下选择最高画质（原逻辑是给最渣画质！）
+                        Logger.log(`优先画质（${SHOWHD.get(hd)}）在当前播放的视频里没有，向下选择最高画质（${SHOWHD.get(control.hd)}）。`);
                     }
 
                     control.autoplay = control.autoplay || false;
@@ -233,6 +244,7 @@
                     localStorage.setItem('spv_volume', data.value);
                 });
 
+                Logger.log('开启音量记忆');
             });
         }
 
@@ -240,10 +252,12 @@
 
     function enableH5Player() {
         sessionStorage.setItem('P_l_h5', 1);
+        Logger.log('启用html5播放器');
     }
 
     function recoverPlayer() {
         sessionStorage.removeItem('P_l_h5');
+        Logger.log('恢复原播放器');
     }
 
 //=============================================================================
