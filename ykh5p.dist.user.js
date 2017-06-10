@@ -12,7 +12,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.3.0
+// @version      0.4.0
 // @description  youku html5 player +
 // @author       gooyie
 // @license      MIT License
@@ -415,6 +415,28 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     Logger.log('开启音量记忆');
                 });
             }
+        }, {
+            key: '_isFullScreen',
+            value: function _isFullScreen() {
+                return !!(document.fullscreen || document.webkitIsFullScreen || document.mozFullScreen || document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+            }
+        }, {
+            key: 'patchFullScreen',
+            value: function patchFullScreen() {
+                var self = this;
+                Hooker.hookManager(function (exports) {
+                    exports.prototype.toggleFull = function (arg) {
+                        this.method = arg.method || 'c';
+                        if (self._isFullScreen()) {
+                            this.containerExitScreen();
+                            Logger.log('退出全屏');
+                        } else {
+                            this.containerFullScreen();
+                            Logger.log('进入全屏');
+                        }
+                    };
+                });
+            }
         }]);
 
         return Patcher;
@@ -442,4 +464,5 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
     Patcher.patchQualitySetting();
     Patcher.patchQualityFallback();
     Patcher.patchVolumeMemory();
+    Patcher.patchFullScreen();
 })();

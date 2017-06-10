@@ -4,7 +4,7 @@
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.3.0
+// @version      0.4.0
 // @description  youku html5 player +
 // @author       gooyie
 // @license      MIT License
@@ -248,6 +248,27 @@
             });
         }
 
+        static _isFullScreen() {
+            return !!(document.fullscreen || document.webkitIsFullScreen || document.mozFullScreen ||
+                document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+        }
+
+        static patchFullScreen() {
+            const self = this;
+            Hooker.hookManager((exports) => {
+                exports.prototype.toggleFull = function(arg) {
+                    this.method = arg.method || 'c';
+                    if (self._isFullScreen()) {
+                        this.containerExitScreen();
+                        Logger.log('退出全屏');
+                    } else {
+                        this.containerFullScreen();
+                        Logger.log('进入全屏');
+                    }
+                };
+            });
+        }
+
     }
 
     function enableH5Player() {
@@ -270,5 +291,6 @@
     Patcher.patchQualitySetting();
     Patcher.patchQualityFallback();
     Patcher.patchVolumeMemory();
+    Patcher.patchFullScreen();
 
 })();
