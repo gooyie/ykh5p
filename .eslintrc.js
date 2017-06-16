@@ -24,5 +24,6 @@ module.exports = {
     globals: {
         GM_addStyle: false,
         GM_info: false,
+        unsafeWindow: false,
     }
 };
