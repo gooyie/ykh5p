@@ -234,6 +234,9 @@
 
         static patchVolumeMemory() {
             Hooker.hookRealStartPlay((that) => {
+                if (this._enabled) return;
+                this._enabled = true;
+
                 if (0 === parseFloat(localStorage.getItem('spv_volume'))) {
                     that.UIControl.__proto__.mute.apply(that.UIControl);
                 } else {
