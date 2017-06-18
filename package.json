@@ -1,6 +1,6 @@
 {
   "name": "ykh5p",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "youku html5 player +",
   "main": "ykh5p.user.js",
   "scripts": {

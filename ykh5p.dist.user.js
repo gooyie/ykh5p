@@ -12,7 +12,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.5.0
+// @version      0.5.1
 // @description  youku html5 player +
 // @author       gooyie
 // @license      MIT License
@@ -377,6 +377,14 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         data.user = { vip: true };
                     }
                     Logger.log('解除会员画质限制');
+                });
+            }
+        }, {
+            key: 'mockExclusiveShow',
+            value: function mockExclusiveShow() {
+                Hooker.hookSkinsControl(function (exports) {
+                    exports.prototype.exclusiveShow = function () {};
+                    Logger.log('和谐水印');
                 });
             }
         }]);
@@ -860,6 +868,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
     Blocker.blockAd();
     Mocker.mockVip();
+    Mocker.mockExclusiveShow();
     Patcher.patchQualitySetting();
     Patcher.patchQualityFallback();
     Patcher.patchVolumeMemory();

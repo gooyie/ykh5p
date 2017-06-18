@@ -4,7 +4,7 @@
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.5.0
+// @version      0.5.1
 // @description  youku html5 player +
 // @author       gooyie
 // @license      MIT License
@@ -196,6 +196,13 @@
                     data.user = {vip: true};
                 }
                 Logger.log('解除会员画质限制');
+            });
+        }
+
+        static mockExclusiveShow() {
+            Hooker.hookSkinsControl((exports) => {
+                exports.prototype.exclusiveShow = () => {};
+                Logger.log('和谐水印');
             });
         }
 
@@ -624,6 +631,7 @@
 
     Blocker.blockAd();
     Mocker.mockVip();
+    Mocker.mockExclusiveShow();
     Patcher.patchQualitySetting();
     Patcher.patchQualityFallback();
     Patcher.patchVolumeMemory();
