@@ -1,7 +1,7 @@
 {
   "name": "ykh5p",
-  "version": "0.5.1",
-  "description": "youku html5 player +",
+  "version": "0.5.2",
+  "description": "改善优酷官方html5播放器播放体验",
   "main": "ykh5p.user.js",
   "scripts": {
     "lint": "eslint ykh5p.user.js",
