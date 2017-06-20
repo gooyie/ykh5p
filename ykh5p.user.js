@@ -4,7 +4,7 @@
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.5.2
+// @version      0.5.3
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -443,6 +443,16 @@
                         that.UIControl.tipShow('播放下一集');
                     } else {
                         that.UIControl.tipShow('没有下一集哦');
+                    }
+                });
+
+                that.EventManager.on('control:show', () => {
+                    that.selector.style.cursor = '';
+                });
+
+                that.EventManager.on('control:hide', () => {
+                    if (this._isFullScreen()) {
+                        that.selector.style.cursor = 'none';
                     }
                 });
             });

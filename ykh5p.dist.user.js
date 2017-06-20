@@ -12,7 +12,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.5.2
+// @version      0.5.3
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -543,6 +543,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }, {
             key: '_patchWatcher',
             value: function _patchWatcher() {
+                var _this9 = this;
+
                 this._patchManager();
 
                 Hooker.hookWatcher(function (that) {
@@ -650,6 +652,16 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                             that.UIControl.tipShow('没有下一集哦');
                         }
                     });
+
+                    that.EventManager.on('control:show', function () {
+                        that.selector.style.cursor = '';
+                    });
+
+                    that.EventManager.on('control:hide', function () {
+                        if (_this9._isFullScreen()) {
+                            that.selector.style.cursor = 'none';
+                        }
+                    });
                 });
             }
             // 让之后的tip覆盖之前的，不然之前的未消失会使之后的被忽略。
@@ -677,7 +689,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             value: function _patchControlHide() {
                 Hooker.hookSkinsControl(function (exports) {
                     exports.prototype.controlHide = function (isAd) {
-                        var _this9 = this;
+                        var _this10 = this;
 
                         if (isAd) {
                             this.setCtrlDom(false);
@@ -686,7 +698,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         if (this.pause || this.timer) return;
 
                         this.timer = setTimeout(function () {
-                            return _this9.setCtrlDom(false);
+                            return _this10.setCtrlDom(false);
                         }, 3e3);
                     };
                 });
