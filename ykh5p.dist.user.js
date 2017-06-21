@@ -12,7 +12,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.6.0
+// @version      0.6.1
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -474,12 +474,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }, {
             key: 'patchVolumeMemory',
             value: function patchVolumeMemory() {
-                var _this8 = this;
-
                 Hooker.hookRealStartPlay(function (that) {
-                    if (_this8._enabled) return;
-                    _this8._enabled = true;
-
                     if (0 === parseFloat(localStorage.getItem('spv_volume'))) {
                         that.UIControl.__proto__.mute.apply(that.UIControl);
                     } else {
@@ -543,7 +538,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }, {
             key: '_patchWatcher',
             value: function _patchWatcher() {
-                var _this9 = this;
+                var _this8 = this;
 
                 this._patchManager();
 
@@ -658,7 +653,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     });
 
                     that.EventManager.on('control:hide', function () {
-                        if (_this9._isFullScreen()) {
+                        if (_this8._isFullScreen()) {
                             that.selector.style.cursor = 'none';
                         }
                     });
@@ -689,7 +684,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             value: function _patchControlHide() {
                 Hooker.hookSkinsControl(function (exports) {
                     exports.prototype.controlHide = function (isAd) {
-                        var _this10 = this;
+                        var _this9 = this;
 
                         if (isAd) {
                             this.setCtrlDom(false);
@@ -698,7 +693,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         if (this.pause || this.timer) return;
 
                         this.timer = setTimeout(function () {
-                            return _this10.setCtrlDom(false);
+                            return _this9.setCtrlDom(false);
                         }, 3e3);
                     };
                 });
@@ -858,7 +853,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             value: function _patchShadowClick() {
                 Hooker.hookSkinsControl(function (exports) {
                     exports.prototype.shadowClick = function () {
-                        var _this11 = this;
+                        var _this10 = this;
 
                         if (this.shadowTimer) {
                             // 短时间内连续单击
@@ -868,17 +863,17 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         }
 
                         this.shadowTimer = setTimeout(function () {
-                            if (!_this11.pause) {
-                                _this11.pauseState();
-                                _this11.EventManager.fire('VideoPause');
-                                _this11.controlShow();
+                            if (!_this10.pause) {
+                                _this10.pauseState();
+                                _this10.EventManager.fire('VideoPause');
+                                _this10.controlShow();
                             } else {
-                                _this11.playingState();
-                                _this11.EventManager.fire('VideoPlay');
-                                _this11.controlHide();
+                                _this10.playingState();
+                                _this10.EventManager.fire('VideoPlay');
+                                _this10.controlHide();
                             }
 
-                            _this11.shadowTimer = null;
+                            _this10.shadowTimer = null;
                         }, 200);
                     };
                 });
@@ -886,7 +881,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }, {
             key: '_patchMouseShortcuts',
             value: function _patchMouseShortcuts() {
-                var _this12 = this;
+                var _this11 = this;
 
                 this._patchShadowClick();
 
@@ -896,7 +891,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     });
 
                     document.addEventListener('wheel', function (event) {
-                        if (!_this12._isFullScreen()) return;
+                        if (!_this11._isFullScreen()) return;
 
                         var delta = event.wheelDelta || event.detail || event.deltaY && -event.deltaY;
                         that.EventManager.fire('_AdjustVolume', delta > 0 ? 0.05 : -0.05);

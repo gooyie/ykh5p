@@ -4,7 +4,7 @@
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.6.0
+// @version      0.6.1
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -279,9 +279,6 @@
 
         static patchVolumeMemory() {
             Hooker.hookRealStartPlay((that) => {
-                if (this._enabled) return;
-                this._enabled = true;
-
                 if (0 === parseFloat(localStorage.getItem('spv_volume'))) {
                     that.UIControl.__proto__.mute.apply(that.UIControl);
                 } else {
