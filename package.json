@@ -1,6 +1,6 @@
 {
   "name": "ykh5p",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "改善优酷官方html5播放器播放体验",
   "main": "ykh5p.user.js",
   "scripts": {

@@ -4,7 +4,7 @@
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.6.1
+// @version      0.6.2
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -202,7 +202,14 @@
         static mockExclusiveShow() {
             Hooker.hookSkinsControl((exports) => {
                 exports.prototype.exclusiveShow = () => {};
-                Logger.log('和谐水印');
+                Logger.log('和谐独播水印');
+            });
+        }
+
+        static mockLogoShow() {
+            Hooker.hookSkinsControl((exports) => {
+                exports.prototype.logoShow = () => {};
+                Logger.log('和谐logo水印');
             });
         }
 
@@ -691,6 +698,7 @@
     Blocker.blockAd();
     Mocker.mockVip();
     Mocker.mockExclusiveShow();
+    Mocker.mockLogoShow();
     Patcher.patchQualitySetting();
     Patcher.patchQualityFallback();
     Patcher.patchVolumeMemory();
