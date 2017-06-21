@@ -12,7 +12,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.5.3
+// @version      0.6.0
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -711,12 +711,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 });
             }
         }, {
-            key: 'patchShortcuts',
-            value: function patchShortcuts() {
-                this._patchWatcher();
-                this._patchTipShow();
-                this._patchVolumeRange();
-                this._patchControlHide();
+            key: '_patchKeyShortcuts',
+            value: function _patchKeyShortcuts() {
                 // 原键盘快捷键在搜索框等仍有效，废了它。
                 Hooker.hookWindowAddEventListener(function (_ref) {
                     var _ref2 = _slicedToArray(_ref, 1),
@@ -853,8 +849,72 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         event.preventDefault();
                         event.stopPropagation();
                     });
+
                     Logger.log('添加键盘快捷键');
                 });
+            }
+        }, {
+            key: '_patchShadowClick',
+            value: function _patchShadowClick() {
+                Hooker.hookSkinsControl(function (exports) {
+                    exports.prototype.shadowClick = function () {
+                        var _this11 = this;
+
+                        if (this.shadowTimer) {
+                            // 短时间内连续单击
+                            clearTimeout(this.shadowTimer);
+                            this.shadowTimer = null;
+                            return;
+                        }
+
+                        this.shadowTimer = setTimeout(function () {
+                            if (!_this11.pause) {
+                                _this11.pauseState();
+                                _this11.EventManager.fire('VideoPause');
+                                _this11.controlShow();
+                            } else {
+                                _this11.playingState();
+                                _this11.EventManager.fire('VideoPlay');
+                                _this11.controlHide();
+                            }
+
+                            _this11.shadowTimer = null;
+                        }, 200);
+                    };
+                });
+            }
+        }, {
+            key: '_patchMouseShortcuts',
+            value: function _patchMouseShortcuts() {
+                var _this12 = this;
+
+                this._patchShadowClick();
+
+                Hooker.hookSkinsControlDomEvent(function (that) {
+                    that.shadow.addEventListener('dblclick', function () {
+                        that.EventManager.fire('SwitchFullScreen');
+                    });
+
+                    document.addEventListener('wheel', function (event) {
+                        if (!_this12._isFullScreen()) return;
+
+                        var delta = event.wheelDelta || event.detail || event.deltaY && -event.deltaY;
+                        that.EventManager.fire('_AdjustVolume', delta > 0 ? 0.05 : -0.05);
+                    });
+
+                    Logger.log('添加鼠标快捷键');
+                });
+            }
+        }, {
+            key: 'patchShortcuts',
+            value: function patchShortcuts() {
+                this._patchWatcher();
+                this._patchTipShow();
+                this._patchVolumeRange();
+                this._patchControlHide();
+
+                this._patchKeyShortcuts();
+                this._patchMouseShortcuts();
             }
         }]);
 

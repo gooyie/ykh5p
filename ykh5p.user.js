@@ -4,7 +4,7 @@
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.5.3
+// @version      0.6.0
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -491,11 +491,7 @@
             Hooker.hookSkinsControlDomEvent(that => that.volumeRange.step = 0.01);
         }
 
-        static patchShortcuts() {
-            this._patchWatcher();
-            this._patchTipShow();
-            this._patchVolumeRange();
-            this._patchControlHide();
+        static _patchKeyShortcuts() {
             // 原键盘快捷键在搜索框等仍有效，废了它。
             Hooker.hookWindowAddEventListener(([type]) => {
                 if (type !== 'keydown') return;
@@ -618,8 +614,64 @@
                     event.preventDefault();
                     event.stopPropagation();
                 });
+
                 Logger.log('添加键盘快捷键');
             });
+        }
+
+        static _patchShadowClick() {
+            Hooker.hookSkinsControl((exports) => {
+                exports.prototype.shadowClick = function() {
+                    if (this.shadowTimer) { // 短时间内连续单击
+                        clearTimeout(this.shadowTimer);
+                        this.shadowTimer = null;
+                        return;
+                    }
+
+                    this.shadowTimer = setTimeout(() => {
+                        if (!this.pause) {
+                            this.pauseState();
+                            this.EventManager.fire('VideoPause');
+                            this.controlShow();
+                        } else {
+                            this.playingState();
+                            this.EventManager.fire('VideoPlay');
+                            this.controlHide();
+                        }
+
+                        this.shadowTimer =  null;
+                    }, 200);
+                };
+            });
+        }
+
+        static _patchMouseShortcuts() {
+            this._patchShadowClick();
+
+            Hooker.hookSkinsControlDomEvent((that) => {
+                that.shadow.addEventListener('dblclick', () => {
+                    that.EventManager.fire('SwitchFullScreen');
+                });
+
+                document.addEventListener('wheel', (event) => {
+                    if (!this._isFullScreen()) return;
+
+                    let delta = event.wheelDelta || event.detail || (event.deltaY && -event.deltaY);
+                    that.EventManager.fire('_AdjustVolume', delta > 0 ? 0.05 : -0.05);
+                });
+
+                Logger.log('添加鼠标快捷键');
+            });
+        }
+
+        static patchShortcuts() {
+            this._patchWatcher();
+            this._patchTipShow();
+            this._patchVolumeRange();
+            this._patchControlHide();
+
+            this._patchKeyShortcuts();
+            this._patchMouseShortcuts();
         }
 
     }
