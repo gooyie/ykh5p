@@ -12,7 +12,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.6.2
+// @version      0.6.3
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -307,6 +307,23 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 });
             }
         }, {
+            key: 'hookOnAdEnd',
+            value: function hookOnAdEnd() {
+                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+
+                this.hookH5PlayerCore(function (exports) {
+                    var _onAdEnd = exports.YoukuH5PlayerCore.prototype._onAdEnd;
+                    exports.YoukuH5PlayerCore.prototype._onAdEnd = function () {
+                        for (var _len14 = arguments.length, args = Array(_len14), _key14 = 0; _key14 < _len14; _key14++) {
+                            args[_key14] = arguments[_key14];
+                        }
+
+                        if (cb(this, args)) return;
+                        _onAdEnd.apply(this, args);
+                    };
+                });
+            }
+        }, {
             key: '_isSkinsControlFactoryCall',
             value: function _isSkinsControlFactoryCall() {
                 var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
@@ -321,8 +338,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
 
                 this.hookFactoryCall(function () {
-                    for (var _len14 = arguments.length, args = Array(_len14), _key14 = 0; _key14 < _len14; _key14++) {
-                        args[_key14] = arguments[_key14];
+                    for (var _len15 = arguments.length, args = Array(_len15), _key15 = 0; _key15 < _len15; _key15++) {
+                        args[_key15] = arguments[_key15];
                     }
 
                     if (_this6._isSkinsControlFactoryCall(args[2].exports)) cb(args[2].exports);
@@ -349,8 +366,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 var window = unsafeWindow;
                 var addEventListener = window.addEventListener.bind(window);
                 window.addEventListener = function () {
-                    for (var _len15 = arguments.length, args = Array(_len15), _key15 = 0; _key15 < _len15; _key15++) {
-                        args[_key15] = arguments[_key15];
+                    for (var _len16 = arguments.length, args = Array(_len16), _key16 = 0; _key16 < _len16; _key16++) {
+                        args[_key16] = arguments[_key16];
                     }
 
                     if (cb(args)) return; // rejection
@@ -919,6 +936,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 this._patchKeyShortcuts();
                 this._patchMouseShortcuts();
             }
+        }, {
+            key: 'patchOnAdEnd',
+            value: function patchOnAdEnd() {
+                Hooker.hookOnAdEnd(function (that) {
+                    return that.hadEnd;
+                });
+            }
         }]);
 
         return Patcher;
@@ -950,4 +974,5 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
     Patcher.patchVolumeMemory();
     Patcher.patchFullScreen();
     Patcher.patchShortcuts();
+    Patcher.patchOnAdEnd();
 })();

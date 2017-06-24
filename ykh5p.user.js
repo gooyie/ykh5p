@@ -4,7 +4,7 @@
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.6.2
+// @version      0.6.3
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -153,6 +153,16 @@
                 exports.YoukuH5PlayerCore.prototype._realStartPlay = function(...args) {
                     cb(this, args);
                     _realStartPlay.apply(this, args);
+                };
+            });
+        }
+
+        static hookOnAdEnd(cb = ()=>{}) {
+            this.hookH5PlayerCore((exports) => {
+                const _onAdEnd = exports.YoukuH5PlayerCore.prototype._onAdEnd;
+                exports.YoukuH5PlayerCore.prototype._onAdEnd = function(...args) {
+                    if (cb(this, args)) return;
+                    _onAdEnd.apply(this, args);
                 };
             });
         }
@@ -678,6 +688,10 @@
             this._patchMouseShortcuts();
         }
 
+        static patchOnAdEnd() {
+            Hooker.hookOnAdEnd(that => that.hadEnd);
+        }
+
     }
 
     function enableH5Player() {
@@ -704,5 +718,6 @@
     Patcher.patchVolumeMemory();
     Patcher.patchFullScreen();
     Patcher.patchShortcuts();
+    Patcher.patchOnAdEnd();
 
 })();
