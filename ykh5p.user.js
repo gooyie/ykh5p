@@ -690,7 +690,7 @@
                     that.EventManager.fire('SwitchFullScreen');
                 });
 
-                document.addEventListener('wheel', (event) => {
+                that.shadow.addEventListener('wheel', (event) => {
                     if (!this._isFullScreen()) return;
 
                     let delta = event.wheelDelta || event.detail || (event.deltaY && -event.deltaY);
