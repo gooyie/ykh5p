@@ -469,6 +469,29 @@
                         that.selector.style.cursor = 'none';
                     }
                 });
+
+                const fullscreenChangeHandler = () => {
+                    that.full = this._isFullScreen();
+
+                    if (that.full) {
+                        that.launchFullscreen();
+                        that.EventManager.fire('enterfullscreen', {full: that.full});
+                        that.UIControl.showTvBtn();
+                    } else {
+                        that.exitFullscreen();
+                        that.EventManager.fire('exitfullscreen', {full: that.full});
+                        that.UIControl.hideTvBtn();
+                    }
+
+                    that.UIControl.headerToggle(that.full);
+                    that.UIControl.cacheProgress(true);
+                    that.config.events.onFullScreen(that.full);
+                };
+                // 优酷只处理了 webkitfullscreenchange
+                that.selector.addEventListener('fullscreenchange', fullscreenChangeHandler);
+                that.selector.addEventListener('mozfullscreenchange', fullscreenChangeHandler);
+                document.addEventListener('fullscreenchange', fullscreenChangeHandler);
+                document.addEventListener('mozfullscreenchange', fullscreenChangeHandler);
             });
         }
         // 让之后的tip覆盖之前的，不然之前的未消失会使之后的被忽略。
