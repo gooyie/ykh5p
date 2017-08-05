@@ -4,7 +4,7 @@
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.6.4
+// @version      0.6.5
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -103,7 +103,17 @@
             });
         }
 
-        static hookWatcher(cb = ()=>{}) {
+        static hookWatcherBefore(cb = ()=>{}) {
+            this.hookManager((exports) => {
+                const watcher = exports.prototype.watcher;
+                exports.prototype.watcher = function() {
+                    cb(this);
+                    watcher.apply(this);
+                };
+            });
+        }
+
+        static hookWatcherAfter(cb = ()=>{}) {
             this.hookManager((exports) => {
                 const watcher = exports.prototype.watcher;
                 exports.prototype.watcher = function() {
@@ -333,8 +343,12 @@
 
         static _patchManager() {
             Hooker.hookManager((exports) => {
+                exports.prototype.hasVideoList = function() {
+                    return !!(this.data.videos && this.data.videos.list);
+                };
+
                 exports.prototype.getPreviousVid = function() {
-                    if (this.data.videos && this.data.videos.list) {
+                    if (this.hasVideoList()) {
                         let list = this.data.videos.list;
                         let currVid = this.data.video.id;
                         let prevSeq = list.find(item => parseInt(item.vid) === currVid).seq - 1;
@@ -354,7 +368,15 @@
         static _patchWatcher() {
             this._patchManager();
 
-            Hooker.hookWatcher((that) => {
+            let addEventListener;
+            Hooker.hookWatcherBefore((that) => {
+                addEventListener = that.selector.addEventListener;
+                that.selector.addEventListener = () => {}; // 不让其处理 webkitfullscreenchange 事件
+            });
+
+            Hooker.hookWatcherAfter((that) => {
+                that.selector.addEventListener = addEventListener;
+
                 that.EventManager.on('_Seek', (seekTime) => {
                     let videoCurrentInfo = {
                         currentTime: seekTime,
@@ -476,7 +498,7 @@
                     if (that.full) {
                         that.launchFullscreen();
                         that.EventManager.fire('enterfullscreen', {full: that.full});
-                        that.UIControl.showTvBtn();
+                        if (that.hasVideoList()) that.UIControl.showTvBtn();
                     } else {
                         that.exitFullscreen();
                         that.EventManager.fire('exitfullscreen', {full: that.full});
@@ -487,10 +509,12 @@
                     that.UIControl.cacheProgress(true);
                     that.config.events.onFullScreen(that.full);
                 };
-                // 优酷只处理了 webkitfullscreenchange
+
                 that.selector.addEventListener('fullscreenchange', fullscreenChangeHandler);
+                that.selector.addEventListener('webkitfullscreenchange', fullscreenChangeHandler);
                 that.selector.addEventListener('mozfullscreenchange', fullscreenChangeHandler);
                 document.addEventListener('fullscreenchange', fullscreenChangeHandler);
+                document.addEventListener('webkitfullscreenchange', fullscreenChangeHandler);
                 document.addEventListener('mozfullscreenchange', fullscreenChangeHandler);
             });
         }

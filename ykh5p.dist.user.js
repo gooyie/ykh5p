@@ -12,7 +12,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.6.4
+// @version      0.6.5
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -195,8 +195,21 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 });
             }
         }, {
-            key: 'hookWatcher',
-            value: function hookWatcher() {
+            key: 'hookWatcherBefore',
+            value: function hookWatcherBefore() {
+                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+
+                this.hookManager(function (exports) {
+                    var watcher = exports.prototype.watcher;
+                    exports.prototype.watcher = function () {
+                        cb(this);
+                        watcher.apply(this);
+                    };
+                });
+            }
+        }, {
+            key: 'hookWatcherAfter',
+            value: function hookWatcherAfter() {
                 var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
 
                 this.hookManager(function (exports) {
@@ -539,8 +552,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             key: '_patchManager',
             value: function _patchManager() {
                 Hooker.hookManager(function (exports) {
+                    exports.prototype.hasVideoList = function () {
+                        return !!(this.data.videos && this.data.videos.list);
+                    };
+
                     exports.prototype.getPreviousVid = function () {
-                        if (this.data.videos && this.data.videos.list) {
+                        if (this.hasVideoList()) {
                             var list = this.data.videos.list;
                             var currVid = this.data.video.id;
                             var prevSeq = list.find(function (item) {
@@ -567,7 +584,15 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
                 this._patchManager();
 
-                Hooker.hookWatcher(function (that) {
+                var addEventListener = void 0;
+                Hooker.hookWatcherBefore(function (that) {
+                    addEventListener = that.selector.addEventListener;
+                    that.selector.addEventListener = function () {}; // 不让其处理 webkitfullscreenchange 事件
+                });
+
+                Hooker.hookWatcherAfter(function (that) {
+                    that.selector.addEventListener = addEventListener;
+
                     that.EventManager.on('_Seek', function (seekTime) {
                         var videoCurrentInfo = {
                             currentTime: seekTime,
@@ -689,7 +714,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         if (that.full) {
                             that.launchFullscreen();
                             that.EventManager.fire('enterfullscreen', { full: that.full });
-                            that.UIControl.showTvBtn();
+                            if (that.hasVideoList()) that.UIControl.showTvBtn();
                         } else {
                             that.exitFullscreen();
                             that.EventManager.fire('exitfullscreen', { full: that.full });
@@ -700,10 +725,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         that.UIControl.cacheProgress(true);
                         that.config.events.onFullScreen(that.full);
                     };
-                    // 优酷只处理了 webkitfullscreenchange
+
                     that.selector.addEventListener('fullscreenchange', fullscreenChangeHandler);
+                    that.selector.addEventListener('webkitfullscreenchange', fullscreenChangeHandler);
                     that.selector.addEventListener('mozfullscreenchange', fullscreenChangeHandler);
                     document.addEventListener('fullscreenchange', fullscreenChangeHandler);
+                    document.addEventListener('webkitfullscreenchange', fullscreenChangeHandler);
                     document.addEventListener('mozfullscreenchange', fullscreenChangeHandler);
                 });
             }
