@@ -4,7 +4,7 @@
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.6.5
+// @version      0.7.0
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -52,23 +52,15 @@
 
     class Hooker {
 
-        static hookCall(after = ()=>{}, before = ()=>{}) {
+        static hookCall(cb = ()=>{}) {
             const call = Function.prototype.call;
             Function.prototype.call = function(...args) {
-                try {
-                    if (args) before(...args);
-                } catch (err) {
-                    Logger.error(err.stack);
-                }
-
                 let ret = call.apply(this, args);
-
                 try {
-                    if (args) after(...args);
+                    if (args) cb(...args);
                 } catch (err) {
                     Logger.error(err.stack);
                 }
-
                 return ret;
             };
 
@@ -77,694 +69,818 @@
             };
         }
 
-        static _isFactoryCall(args) { // m.exports, _dereq_, m, m.exports, outer, modules, cache, entry
-            return args.length === 8 && args[2] instanceof Object && args[2].hasOwnProperty('exports');
+        static _isEsModule(obj) {
+            return obj && obj.__esModule;
+        }
+
+        static _isFuction(arg) {
+            return 'function' === typeof arg;
+        }
+
+        static _isFactoryCall(args) { // module.exports, module, module.exports, require
+            return args.length === 4 && args[1] instanceof Object && args[1].hasOwnProperty('exports');
         }
 
         static hookFactoryCall(cb = ()=>{}) {
             this.hookCall((...args) => {if (this._isFactoryCall(args)) cb(...args);});
         }
 
-        static _isManagerFactoryCall(exports = {}) {
-            return 'function' === typeof exports && exports.prototype.hasOwnProperty('upsDataSuccess');
+        static _isUpsFactoryCall(exports = {}) {
+            return this._isEsModule(exports) && this._isFuction(exports.default) &&
+                   exports.default.prototype && exports.default.prototype.hasOwnProperty('getServieceUrl') &&
+                   /\.id\s*=\s*"ups"/.test(exports.default.toString());
         }
 
-        static hookManager(cb = ()=>{}) {
-            this.hookFactoryCall((...args) => {if (this._isManagerFactoryCall(args[2].exports)) cb(args[2].exports);});
+        static hookUps(cb = ()=>{}) {
+            this.hookFactoryCall((...args) => {if (this._isUpsFactoryCall(args[1].exports)) cb(args[1].exports);});
         }
 
-        static hookUpsDataSuccess(cb = ()=>{}) {
-            this.hookManager((exports) => {
-                const upsDataSuccess = exports.prototype.upsDataSuccess;
-                exports.prototype.upsDataSuccess = function(data) {
-                    cb(data);
-                    upsDataSuccess.apply(this, [data]);
+        static hookUpsOnComplete(cb = ()=>{}) {
+            this.hookUps((exports) => {
+                const onComplete = exports.default.prototype.onComplete;
+                exports.default.prototype.onComplete = function(res) {
+                    cb(res);
+                    onComplete.apply(this, [res]);
                 };
             });
         }
 
-        static hookWatcherBefore(cb = ()=>{}) {
-            this.hookManager((exports) => {
-                const watcher = exports.prototype.watcher;
-                exports.prototype.watcher = function() {
+        static _isLogoFactoryCall(exports = {}) {
+            return this._isEsModule(exports) && this._isFuction(exports.default) &&
+                   exports.default.prototype && exports.default.prototype.hasOwnProperty('reset') &&
+                   /logo\.style\.display/.test(exports.default.prototype.reset.toString());
+        }
+
+        static hookLogo(cb = ()=>{}) {
+            this.hookFactoryCall((...args) => {if (this._isLogoFactoryCall(args[1].exports)) cb(args[1].exports);});
+        }
+
+        static _isSettingFactoryCall(exports = {}) {
+            return this._isEsModule(exports) && this._isFuction(exports.default) &&
+                   exports.default.prototype && exports.default.prototype.hasOwnProperty('setQuality');
+        }
+
+        static hookSetting(cb = ()=>{}) {
+            this.hookFactoryCall((...args) => {if (this._isSettingFactoryCall(args[1].exports)) cb(args[1].exports);});
+        }
+
+        static hookRenderQulaity(cb = ()=>{}) {
+            Hooker.hookSetting((exports) => {
+                const renderQulaity = exports.default.prototype.renderQulaity;
+                exports.default.prototype.renderQulaity = function(qualitys) {
+                    cb(qualitys, this);
+                    renderQulaity.apply(this, [qualitys]);
+                };
+            });
+        }
+
+        static hookSetCurrentQuality(cb = ()=>{}) {
+            Hooker.hookSetting((exports) => {
+                const setCurrentQuality = exports.default.prototype.setCurrentQuality;
+                exports.default.prototype.setCurrentQuality = function() {
                     cb(this);
-                    watcher.apply(this);
+                    setCurrentQuality.apply(this);
                 };
             });
         }
 
-        static hookWatcherAfter(cb = ()=>{}) {
-            this.hookManager((exports) => {
-                const watcher = exports.prototype.watcher;
-                exports.prototype.watcher = function() {
-                    watcher.apply(this);
+        static _isPlayerFactoryCall(exports = {}) {
+            return this._isEsModule(exports) && this._isFuction(exports.default) &&
+                   exports.default.prototype && exports.default.prototype.hasOwnProperty('_resetPlayer');
+        }
+
+        static hookPlayer(cb = ()=>{}) {
+            this.hookFactoryCall((...args) => {if (this._isPlayerFactoryCall(args[1].exports)) cb(args[1].exports);});
+        }
+
+        static hookPlayerInitServiceEvent(cb = ()=>{}) {
+            Hooker.hookPlayer((exports) => {
+                const _initServiceEvent = exports.default.prototype._initServiceEvent;
+                exports.default.prototype._initServiceEvent = function() {
                     cb(this);
+                    _initServiceEvent.apply(this);
                 };
             });
         }
 
-        static _isSkinsViewRenderCall(args) {
-            return args.length === 3 && args[1] === 'spvdiv' && args[2].className === 'spv_player';
+        static _isKeyShortcutsFactoryCall(exports = {}) {
+            return this._isEsModule(exports) && this._isFuction(exports.default) &&
+                   exports.default.prototype && exports.default.prototype.hasOwnProperty('registerEvents');
         }
 
-        static hookSkinsViewRender(cb = ()=>{}) {
-            this.hookCall(undefined, (...args) => {if (this._isSkinsViewRenderCall(args)) cb(args[2]);});
+        static hookKeyShortcuts(cb = ()=>{}) {
+            this.hookFactoryCall((...args) => {if (this._isKeyShortcutsFactoryCall(args[1].exports)) cb(args[1].exports);});
         }
 
-        static _isUtilFactoryCall(exports = {}) {
-            return exports.hasOwnProperty('getJsonp') && exports.TAG === 'util';
+        static _isTipsFactoryCall(exports = {}) {
+            return this._isEsModule(exports) && this._isFuction(exports.default) &&
+                   exports.default.prototype && exports.default.prototype.hasOwnProperty('showHintTips');
         }
 
-        static hookUtil(cb = ()=>{}) {
-            this.hookFactoryCall((...args) => {if (this._isUtilFactoryCall(args[2].exports)) cb(args[2].exports);});
+        static hookTips(cb = ()=>{}) {
+            this.hookFactoryCall((...args) => {if (this._isTipsFactoryCall(args[1].exports)) cb(args[1].exports);});
         }
 
-        static hookGetJsonp(cb = ()=>{}) {
-            this.hookUtil((exports) => {
-                const getJsonp = exports.getJsonp.bind(exports);
-                exports.getJsonp = function(...args) { // url, onload, onerror, ontimeout, timeout
-                    if (cb(args)) return; // hijack
-                    getJsonp(...args);
-                };
-            });
+        static _isAdServiceFactoryCall(exports = {}) {
+            return this._isEsModule(exports) && this._isFuction(exports.default) &&
+                   exports.default.prototype && exports.default.prototype.hasOwnProperty('requestAdData');
         }
 
-        static _isH5PlayerCoreFactoryCall(exports = {}) {
-            return exports instanceof Object && exports.hasOwnProperty('YoukuH5PlayerCore');
+        static hookAdService(cb = ()=>{}) {
+            this.hookFactoryCall((...args) => {if (this._isAdServiceFactoryCall(args[1].exports)) cb(args[1].exports);});
         }
 
-        static hookH5PlayerCore(cb = ()=>{}) {
-            this.hookFactoryCall((...args) => {if (this._isH5PlayerCoreFactoryCall(args[2].exports)) cb(args[2].exports);});
+        static _extractArgsName(code) {
+            return code.slice(code.indexOf('(') + 1, code.indexOf(')')).split(/\s*,\s*/);
         }
 
-        static hookRealStartPlay(cb = ()=>{}) {
-            this.hookH5PlayerCore((exports) => {
-                const _realStartPlay = exports.YoukuH5PlayerCore.prototype._realStartPlay;
-                exports.YoukuH5PlayerCore.prototype._realStartPlay = function(...args) {
-                    cb(this, args);
-                    _realStartPlay.apply(this, args);
-                };
-            });
+        static _extractFunctionBody(code) {
+            return code.slice(code.indexOf('{') + 1, code.lastIndexOf('}'));
         }
 
-        static hookOnAdEnd(cb = ()=>{}) {
-            this.hookH5PlayerCore((exports) => {
-                const _onAdEnd = exports.YoukuH5PlayerCore.prototype._onAdEnd;
-                exports.YoukuH5PlayerCore.prototype._onAdEnd = function(...args) {
-                    if (cb(this, args)) return;
-                    _onAdEnd.apply(this, args);
-                };
-            });
+        static _isGlobalFactoryCall(exports = {}) {
+            return exports.SingleVideoControl && exports.MultiVideoControl;
         }
 
-        static _isSkinsControlFactoryCall(exports = {}) {
-            return 'function' === typeof exports && exports.prototype.hasOwnProperty('shadowClick');
+        static hookGlobal(cb = ()=>{}, mode) {
+            if (!this._hookGlobalCallbacks) {
+                this._hookGlobalCallbacks = [];
+                this._hookGlobalCodeCallbacks = [];
+                (mode === 'code' ? this._hookGlobalCodeCallbacks : this._hookGlobalCallbacks).push(cb);
+
+                this.hookFactoryCall((...args) => {
+                    if (this._isGlobalFactoryCall(args[1].exports)) {
+                        if (this._hookGlobalCodeCallbacks.length > 0) {
+                            let code = args[3].m[args[1].i].toString();
+                            code = this._hookGlobalCodeCallbacks.reduce((c, cb) => cb(c), code);
+                            const fn = new Function(...this._extractArgsName(code), this._extractFunctionBody(code));
+                            fn.apply(args[0], args.slice(1));
+                        }
+                        this._hookGlobalCallbacks.forEach(cb => cb(args[1].exports));
+                    }
+                });
+            } else {
+                (mode === 'code' ? this._hookGlobalCodeCallbacks : this._hookGlobalCallbacks).push(cb);
+            }
         }
 
-        static hookSkinsControl(cb = ()=>{}) {
-            this.hookFactoryCall((...args) => {if (this._isSkinsControlFactoryCall(args[2].exports)) cb(args[2].exports);});
+        static hookOz(cb = ()=>{}) {
+            if (!this._hookOzCallbacks) {
+                const self = this;
+                this._hookOzCallbacks = [cb];
+                const window = unsafeWindow;
+                let oz = window.oz; // oz 可能先于脚本执行
+
+                Reflect.defineProperty(window, 'oz', {
+                    get: () => {
+                        return oz;
+                    },
+                    set: (value) => {
+                        oz = value;
+                        try {
+                            self._hookOzCallbacks.forEach(cb => cb(oz));
+                        } catch (err) {
+                            Logger.error(err.stack);
+                        }
+                    }
+                });
+
+                if (oz) window.oz = oz; // oz 先于脚本执行
+            } else {
+                this._hookOzCallbacks.push(cb);
+            }
         }
 
-        static hookSkinsControlDomEvent(cb = ()=>{}) {
-            this.hookSkinsControl((exports) => {
-                const domEvent = exports.prototype.domEvent;
-                exports.prototype.domEvent = function() {
-                    cb(this);
-                    domEvent.apply(this);
-                };
-            });
-        }
-
-        static hookWindowAddEventListener(cb = ()=>{}) {
-            const window = unsafeWindow;
-            const addEventListener = window.addEventListener.bind(window);
-            window.addEventListener = function(...args) {
-                if (cb(args)) return; // rejection
-                addEventListener(...args);
-            };
+        static hookDefine(name, cb = ()=>{}) {
+            if (!this._hookDefineCallbacksMap) {
+                this._hookDefineCallbacksMap = new Map([[name, [cb]]]);
+                this.hookOz((oz) => {
+                    const self = this;
+                    const define = oz.define;
+                    oz.define = function(name, deps, block) {
+                        if (self._hookDefineCallbacksMap.has(name)) {
+                            let code = block.toString();
+                            code = self._hookDefineCallbacksMap.get(name).reduce((c, cb) => cb(c), code);
+                            block = new Function(...self._extractArgsName(code), self._extractFunctionBody(code));
+                        }
+                        define(name, deps, block);
+                    };
+                });
+            } else {
+                if (this._hookDefineCallbacksMap.has(name)) {
+                    this._hookDefineCallbacksMap.get(name).push(cb);
+                } else {
+                    this._hookDefineCallbacksMap.set(name, [cb]);
+                }
+            }
         }
 
     }
 
-    class Mocker {
+    class Patch {
 
-        static mockVip() {
-            Hooker.hookUpsDataSuccess((data) => {
+        constructor() {
+            this._installed = false;
+        }
+
+        install() {
+            if (!this._installed) {
+                this._installed = true;
+                this._apply();
+            }
+        }
+
+        _apply() {}
+
+    }
+
+    class AdBlockPatch extends Patch {
+
+        constructor() {
+            super();
+        }
+
+        _apply() {
+            Hooker.hookAdService((exports) => {
+                exports.default.prototype.requestAdData = function(arg) {
+                    this.fail(arg, {code: '404', message: 'error'});
+                };
+            });
+        }
+
+    }
+
+    class WatermarksPatch extends Patch {
+
+        constructor() {
+            super();
+        }
+
+        _apply() {
+            Hooker.hookLogo((exports) => {
+                exports.default.prototype.reset = () => {};
+            });
+        }
+
+    }
+
+    class VipPatch extends Patch {
+
+        constructor() {
+            super();
+        }
+
+        _apply() {
+            Hooker.hookUpsOnComplete((res) => {
+                const data = res.data;
                 if (data.user) {
                     data.user.vip = true;
                 } else {
                     data.user = {vip: true};
                 }
-                Logger.log('解除会员画质限制');
-            });
-        }
-
-        static mockExclusiveShow() {
-            Hooker.hookSkinsControl((exports) => {
-                exports.prototype.exclusiveShow = () => {};
-                Logger.log('和谐独播水印');
-            });
-        }
-
-        static mockLogoShow() {
-            Hooker.hookSkinsControl((exports) => {
-                exports.prototype.logoShow = () => {};
-                Logger.log('和谐logo水印');
             });
         }
 
     }
 
-    class Blocker {
+    class QualitySettingPatch extends Patch {
 
-        static _isAdReq(url) {
-            return /atm\.youku\.com/.test(url);
+        constructor() {
+            super();
         }
 
-        static blockAd() {
-            Hooker.hookGetJsonp((args) => {
-                let [url, /* onload */, onerror] = args;
-                if (this._isAdReq(url)) {
-                    setTimeout(onerror, 0); // async invoke
-                    Logger.log('blocked ad request', url);
-                    return true;
-                }
+        _apply() {
+            this._patchPreferQuality();
+            this._patchCurrentQuality();
+            this._addStyle();
+        }
+
+        _patchPreferQuality() {
+            Hooker.hookSetting((exports) => {
+                let html = exports.default.prototype.render();
+                let autoRe = /<div\s+data-val="auto"[^<>]*>自动<\/div>/;
+                let sdRe = /<div\s+data-val="320p"[^<>]*>标清<\/div>/;
+                let autoDiv = autoRe.exec(html)[0];
+                let fhdDiv = autoDiv.replace('auto', '1080p').replace('自动', '1080p');
+                html = html.replace(autoRe, fhdDiv).replace(sdRe, `$&${autoDiv}`);
+                exports.default.prototype.render = () => html;
             });
         }
 
-    }
-
-    class Patcher {
-
-        static patchQualitySetting() {
-            Hooker.hookSkinsViewRender((elem) => {
-                let autoRe = /<spvdiv\s+customer="auto"[^<>]*>自动<\/spvdiv>/;
-                let mp4Re = /<spvdiv\s+customer="mp4"[^<>]*>标清<\/spvdiv>/;
-                let autoDiv = autoRe.exec(elem.innerHTML)[0];
-                let hd3Div = autoDiv.replace('auto', 'mp4hd3').replace('自动', '1080P');
-                elem.innerHTML = elem.innerHTML.replace(autoRe, hd3Div).replace(mp4Re, `$&${autoDiv}`);
-                Logger.log('设置里优先画质增加1080P选项并对齐到当前画质');
+        _patchCurrentQuality() {
+            Hooker.hookSetting((exports) => {
+                const _findRecentAvaliableQuality = exports.default.prototype._findRecentAvaliableQuality;
+                exports.default.prototype._findRecentAvaliableQuality = function(code, qualitys) {
+                    qualitys.reverse();
+                    return _findRecentAvaliableQuality.apply(this, [code, qualitys]);
+                };
             });
 
+            Hooker.hookRenderQulaity((qualitys) => {
+                qualitys.reverse();
+                let idx = qualitys.findIndex(i => i.code === '1080p');
+                if (idx !== -1) qualitys[idx].name = '1080p';
+            });
+        }
+
+        _addStyle() {
             GM_addStyle(`
-                spvdiv.spv_setting_1080, spvdiv.spv_setting_panel {
-                    width: 300px !important;
+                .personalise-layer {
+                    width: 315px !important;
+                }
+                .setting-bar.setting-confirm {
+                    justify-content: center !important;
                 }
             `);
         }
+    }
 
-        static patchQualityFallback() {
-            Hooker.hookH5PlayerCore((exports) => {
-                const SHOWHD = new Map([
-                    ['flvhd', '标清'],
-                    ['3gphd', '标清'],
-                    ['mp4hd', '高清'],
-                    ['mp4hd2', '超清'],
-                    ['mp4hd3', '1080p'],
-                ]);
+    class QualityFallbackPatch extends Patch {
 
-                exports.YoukuH5PlayerCore.prototype._initControlInfo = function() {
-                    if (!this._videoInfo.langcodes) return;
+        constructor() {
+            super();
+        }
 
-                    const control = this.control;
-                    if (!control.lang || !this._videoInfo.langcodes.includes(control.lang)) {
-                        control.lang = this._videoInfo.langcodes[0];
-                    }
+        _apply() {
+            Hooker.hookRenderQulaity((qualitys, that) => that.data.quality = that.data.preferQuality); // 由优先画质决定当前画质
+            Hooker.hookSetCurrentQuality(that => that._video.global.config.quality = that.data.quality); // 更新config当前画质
+        }
 
-                    const hdcodes = this._videoInfo.hdList[control.lang].hdcodes;
-                    if (!hdcodes.includes(control.hd)) { // 如果设置的优先画质在当前播放的视频里没有
-                        let hd = control.hd;
-                        control.hd = hdcodes[hdcodes.length - 1]; // 向下选择最高画质（原逻辑是给最渣画质！）
-                        Logger.log(`优先画质（${SHOWHD.get(hd)}）在当前播放的视频里没有，向下选择最高画质（${SHOWHD.get(control.hd)}）。`);
-                    }
+    }
 
-                    control.autoplay = control.autoplay || false;
-                    control.fullscreen = control.fullscreen || false;
+    class DashboardPatch extends Patch {
+
+        constructor() {
+            super();
+        }
+
+        _apply() {
+            this._prepare();
+            this._patch();
+        }
+
+        _prepare() {
+            this._exposeDashboard();
+        }
+
+        _findVarName(code) {
+            return /"dashboard"\s*,\s*(\w+)/.exec(code)[1];
+        }
+
+        _exposeDashboard() {
+            Hooker.hookGlobal((code) => {
+                let varName = this._findVarName(code);
+                return code.replace(/\.exports\s*=\s*(\w+)/, `$&;$1.__Dashboard=${varName};`);
+            }, 'code');
+        }
+
+        _patch() {
+            Hooker.hookGlobal((exports) => {
+                exports.__Dashboard.prototype.bindAutoHide = function() {
+                    this._parent.addEventListener('mousemove', () => {
+                        this._hideTimeout && clearTimeout(this._hideTimeout);
+                        this.show();
+                        if (!this._video._videoCore._isPause)
+                            this._hideTimeout = setTimeout(this.hide.bind(this), this._args.autoHide);
+                    });
+                    this._parent.addEventListener('mouseout', () => {
+                        if (!this._video._videoCore._isPause) this.hide();
+                    });
+                };
+                const show = exports.__Dashboard.prototype.show;
+                exports.__Dashboard.prototype.show = function() {
+                    this._parent.style.cursor = '';
+                    show.apply(this);
+                };
+                const hide = exports.__Dashboard.prototype.hide;
+                exports.__Dashboard.prototype.hide = function() {
+                    this._parent.style.cursor = 'none'; // 隐藏鼠标
+                    hide.apply(this);
                 };
             });
         }
 
-        static patchVolumeMemory() {
-            Hooker.hookRealStartPlay((that) => {
-                if (0 === parseFloat(localStorage.getItem('spv_volume'))) {
-                    that.UIControl.__proto__.mute.apply(that.UIControl);
+    }
+
+    class PlayerPatch extends Patch {
+
+        constructor() {
+            super();
+        }
+
+        _apply() {
+            this._prepare();
+            this._hookPlayer();
+        }
+
+        _prepare() {
+            Hooker.hookTips((exports) => {
+                const showHintTips = exports.default.prototype.showHintTips;
+                exports.default.prototype.showHintTips = function(code, info) {
+                    if (info.msg) {
+                        this._hintLayer.setHintShow(info.msg);
+                    } else {
+                        showHintTips.apply(this, [code, info]);
+                    }
+                };
+            });
+            Hooker.hookGlobal((exports) => { // 单video seek 后不自动播放
+                const _setCurrentTime = exports.SingleVideoControl.prototype._setCurrentTime;
+                exports.SingleVideoControl.prototype._setCurrentTime = function(time) {
+                    const play = this.video.play;
+                    this.video.play = () => {};
+                    _setCurrentTime.apply(this, [time]);
+                    this.video.play = play;
+                };
+            });
+        }
+
+        _hookPlayer() {
+            Hooker.hookPlayer(this._hookPlayerCallback.bind(this));
+        }
+
+        _hookPlayerCallback(exports) {
+            const proto = exports.default.prototype;
+
+            proto._showTip = function(msg) {
+                this._emitter.emit('player.showinfo', {type: 'hint', msg});
+            };
+
+            proto.play = function() {
+                this._player && this._player.control.play();
+                this._showTip('播放');
+            };
+
+            proto._pause = proto.pause;
+            proto.pause = function() {
+                this._pause();
+                this._showTip('暂停');
+            };
+
+            proto.adjustVolume = function(value) {
+                this._player && this._player.control.setVolume(this.global.playerState.volume + value);
+            };
+
+            proto.toggleMute = function() {
+                if (this.global.playerState.muted) this._showTip('取消静音');
+                this.setMuted(!this.global.playerState.muted);
+            };
+
+            proto.stepSeek = function(stepTime) {
+                const duration = this._player.control.getDuration();
+                const currentTime = this.global.currentTime;
+                const seekTime = Math.max(0, Math.min(duration, currentTime + stepTime));
+                this.seek(seekTime);
+
+                let msg;
+                if (Math.abs(stepTime) < 60) {
+                    msg = stepTime > 0 ? `步进：${stepTime}秒` : `步退：${Math.abs(stepTime)}秒`;
                 } else {
-                    that.UIControl.__proto__.nomute.apply(that.UIControl);
+                    msg = stepTime > 0 ? `步进：${stepTime/60}分钟` : `步退：${Math.abs(stepTime)/60}分钟`;
                 }
+                this._showTip(msg);
+            };
 
-                that.EventManager.on('VolumeChange', (data) => {
-                    localStorage.setItem('spv_volume', data.value);
-                });
+            proto.rangeSeek = function(range) {
+                const duration = this._player.control.getDuration();
+                const seekTime = Math.max(0, Math.min(duration, duration * range));
+                this.seek(seekTime);
+                this._showTip('定位：' + (range * 100).toFixed(0) + '%');
+            };
 
-                Logger.log('开启音量记忆');
-            });
+            proto.isFullScreen = function() {
+                return this.global.playerState.fullscreen;
+            };
+
+            proto.toggleFullScreen = function() {
+                if (this.isFullScreen()) {
+                    this.exitFullscreen();
+                } else {
+                    this.fullScreen();
+                }
+            };
+
+            proto.adjustPlaybackRate = function(value) {
+                const videoCore = this._player.control._videoCore;
+                const rate = Math.max(0.2, Math.min(5, videoCore.video.playbackRate + value));
+                if (this._player.config.controlType === 'multi') {
+                    videoCore._videoElments.forEach(v => v.playbackRate = rate);
+                } else {
+                    videoCore.video.playbackRate = rate;
+                }
+                this._showTip(`播放速率：${rate.toFixed(1).replace(/\.0+$/, '')}`);
+            };
+
+            proto.resetPlaybackRate = function() {
+                this._player.control.setRate(1);
+                this._showTip('恢复播放速率');
+            };
+
+
+            proto.getFps = function() {
+                return 25; // 标清fps为15，标清以上fps为25。
+            };
+
+            proto.prevFrame = function() {
+                const state = this.global.playerState.state;
+                if (state === 'playing') this.pause();
+                const duration = this._player.control.getDuration();
+                const currentTime = this.global.currentTime;
+                const seekTime = Math.max(0, Math.min(duration, currentTime - 1 / this.getFps()));
+                this.seek(seekTime);
+                this._showTip('上一帧');
+            };
+
+            proto.nextFrame = function() {
+                const state = this.global.playerState.state;
+                if (state === 'playing') this.pause();
+                const duration = this._player.control.getDuration();
+                const currentTime = this.global.currentTime;
+                const seekTime = Math.max(0, Math.min(duration, currentTime + 1 / this.getFps()));
+                this.seek(seekTime);
+                this._showTip('下一帧');
+            };
+
+            proto.playPrev = function() {
+                // TODO:
+            };
+
+            proto.playNext = function() {
+                // TODO:
+            };
         }
 
-        static _isFullScreen() {
-            return !!(document.fullscreen || document.webkitIsFullScreen || document.mozFullScreen ||
-                document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+    }
+
+    const playerPatch = new PlayerPatch();
+
+    class KeyShortcutsPatch extends Patch {
+
+        constructor() {
+            super();
         }
 
-        static patchFullScreen() {
+        _apply() {
+            this._prepare();
+            this._addListener();
+        }
+
+        _prepare() {
+            playerPatch.install();
+            this._obtainPlayer();
+        }
+
+        _obtainPlayer() {
             const self = this;
-            Hooker.hookManager((exports) => {
-                exports.prototype.toggleFull = function(arg) {
-                    this.method = arg.method || 'c';
-                    if (self._isFullScreen()) {
-                        this.containerExitScreen();
-                        Logger.log('退出全屏');
-                    } else {
-                        this.containerFullScreen();
-                        Logger.log('进入全屏');
-                    }
+            Hooker.hookKeyShortcuts(exports => {
+                exports.default.prototype.registerEvents = function() {
+                    self._player = this._player;
                 };
             });
         }
 
-        static _patchManager() {
-            Hooker.hookManager((exports) => {
-                exports.prototype.hasVideoList = function() {
-                    return !!(this.data.videos && this.data.videos.list);
-                };
-
-                exports.prototype.getPreviousVid = function() {
-                    if (this.hasVideoList()) {
-                        let list = this.data.videos.list;
-                        let currVid = this.data.video.id;
-                        let prevSeq = list.find(item => parseInt(item.vid) === currVid).seq - 1;
-                        if (prevSeq > 0) {
-                            let previous = list.find(item => parseInt(item.seq) === prevSeq);
-                            return previous.encodevid;
-                        }
-                    }
-                };
-
-                exports.prototype.getVideoFPS = function() {
-                    return 25; // 优酷m3u8为动态帧率，flv标清fps为15，标清以上fps为25。
-                };
-            });
+        _addListener() {
+            document.addEventListener('keydown', this._handler.bind(this));
         }
 
-        static _patchWatcher() {
-            this._patchManager();
+        _handler(event) {
+            if (event.target.nodeName !== 'BODY') return;
 
-            let addEventListener;
-            Hooker.hookWatcherBefore((that) => {
-                addEventListener = that.selector.addEventListener;
-                that.selector.addEventListener = () => {}; // 不让其处理 webkitfullscreenchange 事件
-            });
-
-            Hooker.hookWatcherAfter((that) => {
-                that.selector.addEventListener = addEventListener;
-
-                that.EventManager.on('_Seek', (seekTime) => {
-                    let videoCurrentInfo = {
-                        currentTime: seekTime,
-                        buffered: that.bufferedEnd()
-                    };
-
-                    that.UIControl.setProgress(videoCurrentInfo, that.duration);
-                    that.UIControl.setTime(seekTime, that);
-
-                    that.seek(seekTime);
-                    // if (that.myVideo.paused) that.play(); // seek后自动播放
-                });
-
-                that.EventManager.on('_StepSeek', (stepTime) => {
-                    let seekTime = Math.max(0, Math.min(that.duration, that.mediaElement.currentTime + stepTime));
-                    let msg;
-
-                    if (Math.abs(stepTime) < 60) {
-                        msg = stepTime > 0 ? `步进：${stepTime}秒` : `步退：${Math.abs(stepTime)}秒`;
+            switch (event.keyCode) {
+            case 32: // Spacebar
+                if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
+                    const state = this._player.global.playerState.state;
+                    if (state === 'paused' || state === 'ended' || state === 'player.init') {
+                        this._player.play();
                     } else {
-                        msg = stepTime > 0 ? `步进：${stepTime/60}分钟` : `步退：${Math.abs(stepTime)/60}分钟`;
+                        this._player.pause();
                     }
-                    that.UIControl.tipShow(msg);
-
-                    that.EventManager.fire('_Seek', seekTime);
-                });
-
-                that.EventManager.on('_RangeSeek', (range) => {
-                    that.UIControl.tipShow('定位：' + (range * 100).toFixed(0) + '%');
-                    let seekTime = Math.max(0, Math.min(that.duration, that.duration * range));
-                    that.EventManager.fire('_Seek', seekTime);
-                });
-
-                that.EventManager.on('_PreviousFrame', () => {
-                    that.UIControl.tipShow('定位：上一帧');
-                    let seekTime = Math.max(0, Math.min(that.duration, that.mediaElement.currentTime - 1 / that.getVideoFPS()));
-                    that.seek(seekTime);
-                });
-
-                that.EventManager.on('_NextFrame', () => {
-                    that.UIControl.tipShow('定位：下一帧');
-                    let seekTime = Math.max(0, Math.min(that.duration, that.mediaElement.currentTime + 1 / that.getVideoFPS()));
-                    that.seek(seekTime);
-                });
-
-                that.EventManager.off('VolumeChange');
-                that.EventManager.on('VolumeChange', (param) => {
-                    if (0 === parseFloat(param.value)) {
-                        that.UIControl.tipShow('静音');
-                    } else {
-                        that.UIControl.tipShow(`音量：${(100 * param.value).toFixed(0)}%`);
-                    }
-                    that.changeMuted(param.value);
-                });
-
-                that.EventManager.on('_AdjustVolume', (value) => {
-                    let volume = that.mediaElement.volume + value;
-                    volume = Math.max(0, Math.min(1, volume.toFixed(2)));
-                    that.mediaElement.volume = volume;
-
-                    that.UIControl.volumeProgress(volume);
-                    that.UIControl.volumeChange();
-                });
-
-                that.EventManager.on('_ToggleMute', () => {
-                    if (that.mediaElement.muted) {
-                        that.UIControl.nomute();
-                        that.UIControl.tipShow('取消静音');
-                    } else {
-                        that.UIControl.mute();
-                        that.UIControl.tipShow('静音');
-                    }
-                });
-
-                that.EventManager.on('_AdjustPlaybackRate', (value) => {
-                    let playbackRate = Math.max(0.2, Math.min(5, that.mediaElement.playbackRate + value));
-                    that.mediaElement.playbackRate = playbackRate;
-                    that.UIControl.tipShow(`播放速率：${playbackRate.toFixed(1).replace(/\.0+$/, '')}`);
-                });
-
-                that.EventManager.on('_ResetPlaybackRate', () => {
-                    that.UIControl.tipShow('恢复播放速率');
-                    that.mediaElement.playbackRate = 1;
-                });
-
-                that.EventManager.on('_PlayPrevious', () => {
-                    let vid = that.getPreviousVid();
-                    if (vid) {
-                        that.EventManager.fire('ChangeVid', {vid});
-                        that.UIControl.tipShow('播放上一集');
-                    } else {
-                        that.UIControl.tipShow('没有上一集哦');
-                    }
-                });
-
-                that.EventManager.on('_PlayNext', () => {
-                    let vid = that.getNextVid();
-                    if (vid) {
-                        that.EventManager.fire('ChangeVid', {vid});
-                        that.UIControl.tipShow('播放下一集');
-                    } else {
-                        that.UIControl.tipShow('没有下一集哦');
-                    }
-                });
-
-                that.EventManager.on('control:show', () => {
-                    that.selector.style.cursor = '';
-                });
-
-                that.EventManager.on('control:hide', () => {
-                    if (this._isFullScreen()) {
-                        that.selector.style.cursor = 'none';
-                    }
-                });
-
-                const fullscreenChangeHandler = () => {
-                    that.full = this._isFullScreen();
-
-                    if (that.full) {
-                        that.launchFullscreen();
-                        that.EventManager.fire('enterfullscreen', {full: that.full});
-                        if (that.hasVideoList()) that.UIControl.showTvBtn();
-                    } else {
-                        that.exitFullscreen();
-                        that.EventManager.fire('exitfullscreen', {full: that.full});
-                        that.UIControl.hideTvBtn();
-                    }
-
-                    that.UIControl.headerToggle(that.full);
-                    that.UIControl.cacheProgress(true);
-                    that.config.events.onFullScreen(that.full);
-                };
-
-                that.selector.addEventListener('fullscreenchange', fullscreenChangeHandler);
-                that.selector.addEventListener('webkitfullscreenchange', fullscreenChangeHandler);
-                that.selector.addEventListener('mozfullscreenchange', fullscreenChangeHandler);
-                document.addEventListener('fullscreenchange', fullscreenChangeHandler);
-                document.addEventListener('webkitfullscreenchange', fullscreenChangeHandler);
-                document.addEventListener('mozfullscreenchange', fullscreenChangeHandler);
-            });
-        }
-        // 让之后的tip覆盖之前的，不然之前的未消失会使之后的被忽略。
-        static _patchTipShow() {
-            Hooker.hookSkinsControl((exports) => {
-                exports.prototype.tipShow = function(msg) {
-                    if (this.timerTip) {
-                        clearTimeout(this.timerTip);
-                        this.timerTip = null;
-                    }
-
-                    this.tip.innerHTML = msg;
-                    if (!this.tipStatus()) this.tipBox.style.display = 'block';
-                    this.tipHide();
-                };
-            });
-        }
-        // 原控件持续显示时间为5秒，有点长，改成3秒吧。
-        static _patchControlHide() {
-            Hooker.hookSkinsControl((exports) => {
-                exports.prototype.controlHide = function(isAd) {
-                    if (isAd) {
-                        this.setCtrlDom(false);
-                        return;
-                    }
-                    if (this.pause || this.timer) return;
-
-                    this.timer = setTimeout(() => this.setCtrlDom(false), 3e3);
-                };
-            });
-        }
-
-        static _patchVolumeRange() {
-            Hooker.hookSkinsControlDomEvent(that => that.volumeRange.step = 0.01);
-        }
-
-        static _patchKeyShortcuts() {
-            // 原键盘快捷键在搜索框等仍有效，废了它。
-            Hooker.hookWindowAddEventListener(([type]) => {
-                if (type !== 'keydown') return;
-
-                let stack = (new Error()).stack;
-                if (stack.includes('domEvent')) {
-                    Logger.log('废除原键盘快捷键');
-                    return true;
+                } else {
+                    return;
                 }
-            });
-
-            Hooker.hookSkinsControlDomEvent((that) => {
-                document.addEventListener('keydown', (event) => {
-                    if (event.target.nodeName !== 'BODY') return;
-
-                    switch (event.keyCode) {
-                    case 32: // Spacebar
-                        if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
-                            if (that.pause) {
-                                that.EventManager.fire('VideoPlay');
-                            } else {
-                                that.EventManager.fire('VideoPause');
-                            }
-                        } else {
-                            return;
-                        }
-                        break;
-                    case 39:    // → Arrow Right
-                    case 37: {  // ← Arrow Left
-                        let stepTime;
-                        if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
-                            stepTime = 39 === event.keyCode ? 5 : -5;
-                        } else if (event.ctrlKey && !event.shiftKey && !event.altKey) {
-                            stepTime = 39 === event.keyCode ? 30 : -30;
-                        } else if (!event.ctrlKey && event.shiftKey && !event.altKey) {
-                            stepTime = 39 === event.keyCode ? 60 : -60;
-                        } else if (event.ctrlKey && !event.shiftKey && event.altKey) {
-                            stepTime = 39 === event.keyCode ? 3e2 : -3e2; // 5分钟
-                        } else {
-                            return;
-                        }
-
-                        that.EventManager.fire('_StepSeek', stepTime);
-                        break;
+                break;
+            case 39:    // → Arrow Right
+            case 37: {  // ← Arrow Left
+                let stepTime;
+                if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
+                    stepTime = 39 === event.keyCode ? 5 : -5;
+                } else if (event.ctrlKey && !event.shiftKey && !event.altKey) {
+                    stepTime = 39 === event.keyCode ? 30 : -30;
+                } else if (!event.ctrlKey && event.shiftKey && !event.altKey) {
+                    stepTime = 39 === event.keyCode ? 60 : -60;
+                } else if (event.ctrlKey && !event.shiftKey && event.altKey) {
+                    stepTime = 39 === event.keyCode ? 3e2 : -3e2; // 5分钟
+                } else {
+                    return;
+                }
+                this._player.stepSeek(stepTime);
+                break;
+            }
+            case 38: // ↑ Arrow Up
+            case 40: // ↓ Arrow Down
+                if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
+                    this._player.adjustVolume(38 === event.keyCode ? 0.05 : -0.05);
+                } else {
+                    return;
+                }
+                break;
+            case 77: // M
+                if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
+                    this._player.toggleMute();
+                } else {
+                    return;
+                }
+                break;
+            case 13: // Enter
+                if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
+                    this._player.toggleFullScreen();
+                } else {
+                    return;
+                }
+                break;
+            case 67: // C
+            case 88: // X
+                if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
+                    this._player.adjustPlaybackRate(67 === event.keyCode ? 0.1 : -0.1);
+                } else {
+                    return;
+                }
+                break;
+            case 90: // Z
+                if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
+                    this._player.resetPlaybackRate();
+                } else {
+                    return;
+                }
+                break;
+            case 68: // D
+            case 70: // F
+                if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
+                    if (event.keyCode === 68) {
+                        this._player.prevFrame();
+                    } else {
+                        this._player.nextFrame();
                     }
-                    case 38: // ↑ Arrow Up
-                    case 40: // ↓ Arrow Down
-                        if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
-                            that.EventManager.fire('_AdjustVolume', 38 === event.keyCode ? 0.05 : -0.05);
-                        } else {
-                            return;
-                        }
-                        break;
-                    case 77: // M
-                        if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
-                            that.EventManager.fire('_ToggleMute');
-                        } else {
-                            return;
-                        }
-                        break;
-                    case 13: // Enter
-                        if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
-                            that.EventManager.fire('SwitchFullScreen');
-                        } else {
-                            return;
-                        }
-                        break;
-                    case 67: // C
-                    case 88: // X
-                        if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
-                            that.EventManager.fire('_AdjustPlaybackRate', 67 === event.keyCode ? 0.1 : -0.1);
-                        } else {
-                            return;
-                        }
-                        break;
-                    case 90: // Z
-                        if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
-                            that.EventManager.fire('_ResetPlaybackRate');
-                        } else {
-                            return;
-                        }
-                        break;
-                    case 68: // D
-                    case 70: // F
-                        if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
-                            if (!that.pause) that.EventManager.fire('VideoPause');
-                            if (event.keyCode === 68) {
-                                that.EventManager.fire('_PreviousFrame');
-                            } else {
-                                that.EventManager.fire('_NextFrame');
-                            }
-                        } else {
-                            return;
-                        }
-                        break;
-                    case 80: // P
-                    case 78: // N
-                        if (!event.ctrlKey && event.shiftKey && !event.altKey) {
-                            if (event.keyCode === 78) {
-                                that.EventManager.fire('_PlayNext');
-                            } else {
-                                that.EventManager.fire('_PlayPrevious');
-                            }
-                        } else {
-                            return;
-                        }
-                        break;
-                    default:
-                        if (event.keyCode >= 48 && event.keyCode <= 57) { // 0 ~ 9
-                            if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
-                                that.EventManager.fire('_RangeSeek', (event.keyCode - 48) * 0.1);
-                            } else {
-                                return;
-                            }
-                        } else {
-                            return;
-                        }
+                } else {
+                    return;
+                }
+                break;
+            case 80: // P
+            case 78: // N
+                if (!event.ctrlKey && event.shiftKey && !event.altKey) {
+                    if (event.keyCode === 78) {
+                        this._player.playNext();
+                    } else {
+                        this._player.playPrev();
                     }
-
-                    event.preventDefault();
-                    event.stopPropagation();
-                });
-
-                Logger.log('添加键盘快捷键');
-            });
-        }
-
-        static _patchShadowClick() {
-            Hooker.hookSkinsControl((exports) => {
-                exports.prototype.shadowClick = function() {
-                    if (this.shadowTimer) { // 短时间内连续单击
-                        clearTimeout(this.shadowTimer);
-                        this.shadowTimer = null;
+                } else {
+                    return;
+                }
+                break;
+            default:
+                if (event.keyCode >= 48 && event.keyCode <= 57) { // 0 ~ 9
+                    if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
+                        this._player.rangeSeek((event.keyCode - 48) * 0.1);
+                    } else {
                         return;
                     }
+                } else {
+                    return;
+                }
+            }
 
-                    this.shadowTimer = setTimeout(() => {
-                        if (!this.pause) {
-                            this.pauseState();
-                            this.EventManager.fire('VideoPause');
-                            this.controlShow();
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+    }
+
+    class MouseShortcutsPatch extends Patch {
+
+        constructor() {
+            super();
+        }
+
+        _apply() {
+            this._prepare();
+            this._addListener();
+        }
+
+        _prepare() {
+            playerPatch.install();
+        }
+
+        _addListener() {
+            Hooker.hookPlayerInitServiceEvent((that) => {
+                let timer;
+                that.container.addEventListener('click', (event) => {
+                    if (event.target.className !== 'h5-ext-layer-adsdk') return;
+                    if (timer) {
+                        clearTimeout(timer);
+                        timer = null;
+                        return;
+                    }
+                    timer = setTimeout(() => {
+                        const state = that.global.playerState.state;
+                        if (state === 'paused' || state === 'ended' || state === 'player.init') {
+                            that.play();
                         } else {
-                            this.playingState();
-                            this.EventManager.fire('VideoPlay');
-                            this.controlHide();
+                            that.pause();
                         }
-
-                        this.shadowTimer =  null;
+                        timer = null;
                     }, 200);
-                };
+                });
+                that.container.addEventListener('dblclick', () => that.toggleFullScreen());
+                that.container.addEventListener('wheel', (event) => {
+                    if (!that.isFullScreen()) return;
+                    const delta = event.wheelDelta || event.detail || (event.deltaY && -event.deltaY);
+                    that.adjustVolume(delta > 0 ? 0.05 : -0.05);
+                });
             });
         }
 
-        static _patchMouseShortcuts() {
-            this._patchShadowClick();
+    }
 
-            Hooker.hookSkinsControlDomEvent((that) => {
-                that.shadow.addEventListener('dblclick', () => {
-                    that.EventManager.fire('SwitchFullScreen');
-                });
+    class ShortcutsPatch extends Patch {
 
-                that.shadow.addEventListener('wheel', (event) => {
-                    if (!this._isFullScreen()) return;
-
-                    let delta = event.wheelDelta || event.detail || (event.deltaY && -event.deltaY);
-                    that.EventManager.fire('_AdjustVolume', delta > 0 ? 0.05 : -0.05);
-                });
-
-                Logger.log('添加鼠标快捷键');
-            });
+        constructor() {
+            super();
         }
 
-        static patchShortcuts() {
-            this._patchWatcher();
-            this._patchTipShow();
-            this._patchVolumeRange();
-            this._patchControlHide();
-
-            this._patchKeyShortcuts();
-            this._patchMouseShortcuts();
+        _apply() {
+            (new KeyShortcutsPatch()).install();
+            Logger.log('添加键盘快捷键');
+            (new MouseShortcutsPatch()).install();
+            Logger.log('添加鼠标快捷键');
         }
 
-        static patchOnAdEnd() {
-            Hooker.hookOnAdEnd(that => that.hadEnd);
+    }
+
+    class H5Patch extends Patch {
+
+        constructor() {
+            super();
+        }
+
+        _apply() {
+            Hooker.hookDefine('page/find/play/player/load', this._forceH5.bind(this));
+        }
+
+        _forceH5(code) {
+            return code.replace(/(if\s*\().*?(\)\s*\{)/, '$1true$2');
         }
 
     }
 
     function enableH5Player() {
-        sessionStorage.setItem('P_l_h5', 1);
+        (new H5Patch()).install();
         Logger.log('启用html5播放器');
     }
 
-    function recoverPlayer() {
-        sessionStorage.removeItem('P_l_h5');
-        Logger.log('恢复原播放器');
+    function blockAds() {
+        (new AdBlockPatch()).install();
+        Logger.log('和谐广告');
+    }
+
+    function invalidateWatermarks() {
+        (new WatermarksPatch()).install();
+        Logger.log('和谐水印');
+    }
+
+    function invalidateQualityLimitation() {
+        (new VipPatch()).install();
+        Logger.log('解除会员画质限制');
+    }
+
+    function improveQualitySetting() {
+        (new QualitySettingPatch()).install();
+        Logger.log('设置里优先画质增加1080P选项并与当前画质对齐');
+    }
+
+    function improveQualityFallback() {
+        (new QualityFallbackPatch()).install();
+        Logger.log('改善当前画质逻辑');
+    }
+
+    function improveAutoHide() {
+        (new DashboardPatch()).install();
+        Logger.log('改善控件与光标自动隐藏');
+    }
+
+    function improveShortcuts() {
+        (new ShortcutsPatch()).install();
     }
 
 //=============================================================================
 
     enableH5Player();
-    window.addEventListener('unload', () => recoverPlayer()); // 禁用脚本刷新页面可恢复播放器
+    blockAds();
+    invalidateWatermarks();
+    invalidateQualityLimitation();
+    improveQualitySetting();
+    improveQualityFallback();
+    improveAutoHide();
+    improveShortcuts();
 
-    Blocker.blockAd();
-    Mocker.mockVip();
-    Mocker.mockExclusiveShow();
-    Mocker.mockLogoShow();
-    Patcher.patchQualitySetting();
-    Patcher.patchQualityFallback();
-    Patcher.patchVolumeMemory();
-    Patcher.patchFullScreen();
-    Patcher.patchShortcuts();
-    Patcher.patchOnAdEnd();
 
 })();
