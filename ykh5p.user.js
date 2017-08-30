@@ -4,7 +4,7 @@
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.7.0
+// @version      0.7.1
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -437,15 +437,25 @@
         _patch() {
             Hooker.hookGlobal((exports) => {
                 exports.__Dashboard.prototype.bindAutoHide = function() {
+                    this._video.on('play', () => {
+                        this._hideTimeout = setTimeout(this.hide.bind(this), this._args.autoHide);
+                    });
+                    this._video.on('pause', () => {
+                        this._hideTimeout && clearTimeout(this._hideTimeout);
+                        this.show();
+                    });
                     this._parent.addEventListener('mousemove', () => {
                         this._hideTimeout && clearTimeout(this._hideTimeout);
                         this.show();
-                        if (!this._video._videoCore._isPause)
+                        if (!this._isPaused())
                             this._hideTimeout = setTimeout(this.hide.bind(this), this._args.autoHide);
                     });
                     this._parent.addEventListener('mouseout', () => {
-                        if (!this._video._videoCore._isPause) this.hide();
+                        if (!this._isPaused()) this.hide();
                     });
+                };
+                exports.__Dashboard.prototype._isPaused = function() {
+                    return this._video._videoCore.video.paused;
                 };
                 const show = exports.__Dashboard.prototype.show;
                 exports.__Dashboard.prototype.show = function() {
@@ -773,8 +783,8 @@
         _addListener() {
             Hooker.hookPlayerInitServiceEvent((that) => {
                 let timer;
-                that.container.addEventListener('click', (event) => {
-                    if (event.target.className !== 'h5-ext-layer-adsdk') return;
+                const container = that.container.querySelector('.h5-layer-conatiner');
+                container.addEventListener('click', () => {
                     if (timer) {
                         clearTimeout(timer);
                         timer = null;
@@ -790,8 +800,8 @@
                         timer = null;
                     }, 200);
                 });
-                that.container.addEventListener('dblclick', () => that.toggleFullScreen());
-                that.container.addEventListener('wheel', (event) => {
+                container.addEventListener('dblclick', () => that.toggleFullScreen());
+                container.addEventListener('wheel', (event) => {
                     if (!that.isFullScreen()) return;
                     const delta = event.wheelDelta || event.detail || (event.deltaY && -event.deltaY);
                     that.adjustVolume(delta > 0 ? 0.05 : -0.05);
@@ -881,6 +891,5 @@
     improveQualityFallback();
     improveAutoHide();
     improveShortcuts();
-
 
 })();

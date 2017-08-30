@@ -16,7 +16,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.7.0
+// @version      0.7.1
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -711,14 +711,24 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     exports.__Dashboard.prototype.bindAutoHide = function () {
                         var _this18 = this;
 
+                        this._video.on('play', function () {
+                            _this18._hideTimeout = setTimeout(_this18.hide.bind(_this18), _this18._args.autoHide);
+                        });
+                        this._video.on('pause', function () {
+                            _this18._hideTimeout && clearTimeout(_this18._hideTimeout);
+                            _this18.show();
+                        });
                         this._parent.addEventListener('mousemove', function () {
                             _this18._hideTimeout && clearTimeout(_this18._hideTimeout);
                             _this18.show();
-                            if (!_this18._video._videoCore._isPause) _this18._hideTimeout = setTimeout(_this18.hide.bind(_this18), _this18._args.autoHide);
+                            if (!_this18._isPaused()) _this18._hideTimeout = setTimeout(_this18.hide.bind(_this18), _this18._args.autoHide);
                         });
                         this._parent.addEventListener('mouseout', function () {
-                            if (!_this18._video._videoCore._isPause) _this18.hide();
+                            if (!_this18._isPaused()) _this18.hide();
                         });
+                    };
+                    exports.__Dashboard.prototype._isPaused = function () {
+                        return this._video._videoCore.video.paused;
                     };
                     var show = exports.__Dashboard.prototype.show;
                     exports.__Dashboard.prototype.show = function () {
@@ -1089,8 +1099,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             value: function _addListener() {
                 Hooker.hookPlayerInitServiceEvent(function (that) {
                     var timer = void 0;
-                    that.container.addEventListener('click', function (event) {
-                        if (event.target.className !== 'h5-ext-layer-adsdk') return;
+                    var container = that.container.querySelector('.h5-layer-conatiner');
+                    container.addEventListener('click', function () {
                         if (timer) {
                             clearTimeout(timer);
                             timer = null;
@@ -1106,10 +1116,10 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                             timer = null;
                         }, 200);
                     });
-                    that.container.addEventListener('dblclick', function () {
+                    container.addEventListener('dblclick', function () {
                         return that.toggleFullScreen();
                     });
-                    that.container.addEventListener('wheel', function (event) {
+                    container.addEventListener('wheel', function (event) {
                         if (!that.isFullScreen()) return;
                         var delta = event.wheelDelta || event.detail || event.deltaY && -event.deltaY;
                         that.adjustVolume(delta > 0 ? 0.05 : -0.05);
