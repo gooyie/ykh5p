@@ -4,7 +4,7 @@
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.7.2
+// @version      0.8.0
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -516,7 +516,66 @@
 
     }
 
+    class WebFullscreen {
 
+        constructor(elem) {
+            this._elem = elem;
+        }
+
+        isWebFullscreen() {
+            return this._elem.classList.contains('webfullscreen');
+        }
+
+        enter() {
+            this._elem.classList.add('webfullscreen');
+            document.body.style.overflow = 'hidden';
+
+            let parentNode = this._elem.parentNode;
+            while (parentNode.nodeName !== 'BODY') {
+                if (parentNode.nodeType === Node.ELEMENT_NODE) {
+                    parentNode.classList.add('z-top');
+                }
+                parentNode = parentNode.parentNode;
+            }
+        }
+
+        exit() {
+            this._elem.classList.remove('webfullscreen');
+            document.body.style.overflow = '';
+
+            let parentNode = this._elem.parentNode;
+            while (parentNode.nodeName !== 'BODY') {
+                if (parentNode.nodeType === Node.ELEMENT_NODE) {
+                    parentNode.classList.remove('z-top');
+                }
+                parentNode = parentNode.parentNode;
+            }
+        }
+
+        toggle() {
+            this.isWebFullscreen() ? this.exit() : this.enter();
+        }
+
+        static addStyle() {
+            GM_addStyle(`
+                .z-top {
+                    position: relative !important;
+                    z-index: 23333333 !important;
+                }
+
+                .webfullscreen {
+                    display: block !important;
+                    position: fixed !important;
+                    width: 100% !important;
+                    height: 100% !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    background: #000 !important;
+                    z-index: 23333333 !important;
+                }
+            `);
+        }
+    }
 
     class PlayerPatch extends Patch {
 
@@ -557,6 +616,13 @@
 
         _hookPlayerCallback(exports) {
             const proto = exports.default.prototype;
+
+            const _init = exports.default.prototype._init;
+            exports.default.prototype._init = function() {
+                _init.apply(this);
+                WebFullscreen.addStyle();
+                this._webfullscreen = new WebFullscreen(this.container);
+            };
 
             proto._showTip = function(msg) {
                 this._emitter.emit('player.showinfo', {type: 'hint', msg});
@@ -604,16 +670,32 @@
                 this._showTip('定位：' + (range * 100).toFixed(0) + '%');
             };
 
-            proto.isFullScreen = function() {
+            proto.isFullscreen = function() {
                 return this.global.playerState.fullscreen;
             };
 
-            proto.toggleFullScreen = function() {
-                if (this.isFullScreen()) {
+            proto.toggleFullscreen = function() {
+                if (this.isFullscreen()) {
                     this.exitFullscreen();
                 } else {
                     this.fullScreen();
                 }
+            };
+
+            proto.isWebFullscreen = function() {
+                return this._webfullscreen.isWebFullscreen();
+            };
+
+            proto.enterWebFullscreen = function() {
+                this._webfullscreen.enter();
+            };
+
+            proto.exitWebFullscreen = function() {
+                this._webfullscreen.exit();
+            };
+
+            proto.toggleWebFullscreen = function() {
+                this.isWebFullscreen() ? this.exitWebFullscreen() : this.enterWebFullscreen();
             };
 
             proto.adjustPlaybackRate = function(value) {
@@ -749,7 +831,9 @@
                 break;
             case 13: // Enter
                 if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
-                    this._player.toggleFullScreen();
+                    this._player.toggleFullscreen();
+                } else if (event.ctrlKey && !event.shiftKey && !event.altKey) {
+                    this._player.toggleWebFullscreen();
                 } else {
                     return;
                 }
@@ -864,12 +948,13 @@
                 });
                 container.addEventListener('dblclick', (event) => {
                     if (event.target !== container) return;
-                    that.toggleFullScreen();
+                    event.ctrlKey ? that.toggleWebFullscreen() : that.toggleFullscreen();
                 });
                 container.addEventListener('wheel', (event) => {
-                    if (event.target !== container || !that.isFullScreen()) return;
-                    const delta = event.wheelDelta || event.detail || (event.deltaY && -event.deltaY);
-                    that.adjustVolume(delta > 0 ? 0.05 : -0.05);
+                    if (event.target === container && (that.isFullscreen() || that.isWebFullscreen())) {
+                        const delta = event.wheelDelta || event.detail || (event.deltaY && -event.deltaY);
+                        that.adjustVolume(delta > 0 ? 0.05 : -0.05);
+                    }
                 });
             });
         }
