@@ -16,7 +16,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.7.1
+// @version      0.7.2
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -371,6 +371,41 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 });
             }
         }, {
+            key: '_isTopAreaFactoryCall',
+            value: function _isTopAreaFactoryCall() {
+                var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
+                return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('_timerHandler');
+            }
+        }, {
+            key: 'hookTopArea',
+            value: function hookTopArea() {
+                var _this9 = this;
+
+                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+
+                this.hookFactoryCall(function () {
+                    for (var _len15 = arguments.length, args = Array(_len15), _key15 = 0; _key15 < _len15; _key15++) {
+                        args[_key15] = arguments[_key15];
+                    }
+
+                    if (_this9._isTopAreaFactoryCall(args[1].exports)) cb(args[1].exports);
+                });
+            }
+        }, {
+            key: 'hookTopAreaAddEvent',
+            value: function hookTopAreaAddEvent() {
+                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+
+                Hooker.hookTopArea(function (exports) {
+                    var _addEvent = exports.default.prototype._addEvent;
+                    exports.default.prototype._addEvent = function () {
+                        cb(this);
+                        _addEvent.apply(this);
+                    };
+                });
+            }
+        }, {
             key: '_extractArgsName',
             value: function _extractArgsName(code) {
                 return code.slice(code.indexOf('(') + 1, code.indexOf(')')).split(/\s*,\s*/);
@@ -390,7 +425,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }, {
             key: 'hookGlobal',
             value: function hookGlobal() {
-                var _this9 = this;
+                var _this10 = this;
 
                 var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
                 var mode = arguments[1];
@@ -401,20 +436,20 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     (mode === 'code' ? this._hookGlobalCodeCallbacks : this._hookGlobalCallbacks).push(cb);
 
                     this.hookFactoryCall(function () {
-                        for (var _len15 = arguments.length, args = Array(_len15), _key15 = 0; _key15 < _len15; _key15++) {
-                            args[_key15] = arguments[_key15];
+                        for (var _len16 = arguments.length, args = Array(_len16), _key16 = 0; _key16 < _len16; _key16++) {
+                            args[_key16] = arguments[_key16];
                         }
 
-                        if (_this9._isGlobalFactoryCall(args[1].exports)) {
-                            if (_this9._hookGlobalCodeCallbacks.length > 0) {
+                        if (_this10._isGlobalFactoryCall(args[1].exports)) {
+                            if (_this10._hookGlobalCodeCallbacks.length > 0) {
                                 var code = args[3].m[args[1].i].toString();
-                                code = _this9._hookGlobalCodeCallbacks.reduce(function (c, cb) {
+                                code = _this10._hookGlobalCodeCallbacks.reduce(function (c, cb) {
                                     return cb(c);
                                 }, code);
-                                var fn = new (Function.prototype.bind.apply(Function, [null].concat(_toConsumableArray(_this9._extractArgsName(code)), [_this9._extractFunctionBody(code)])))();
+                                var fn = new (Function.prototype.bind.apply(Function, [null].concat(_toConsumableArray(_this10._extractArgsName(code)), [_this10._extractFunctionBody(code)])))();
                                 fn.apply(args[0], args.slice(1));
                             }
-                            _this9._hookGlobalCallbacks.forEach(function (cb) {
+                            _this10._hookGlobalCallbacks.forEach(function (cb) {
                                 return cb(args[1].exports);
                             });
                         }
@@ -458,14 +493,14 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }, {
             key: 'hookDefine',
             value: function hookDefine(name) {
-                var _this10 = this;
+                var _this11 = this;
 
                 var cb = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
 
                 if (!this._hookDefineCallbacksMap) {
                     this._hookDefineCallbacksMap = new Map([[name, [cb]]]);
                     this.hookOz(function (oz) {
-                        var self = _this10;
+                        var self = _this11;
                         var define = oz.define;
                         oz.define = function (name, deps, block) {
                             if (self._hookDefineCallbacksMap.has(name)) {
@@ -697,10 +732,10 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }, {
             key: '_exposeDashboard',
             value: function _exposeDashboard() {
-                var _this17 = this;
+                var _this18 = this;
 
                 Hooker.hookGlobal(function (code) {
-                    var varName = _this17._findVarName(code);
+                    var varName = _this18._findVarName(code);
                     return code.replace(/\.exports\s*=\s*(\w+)/, '$&;$1.__Dashboard=' + varName + ';');
                 }, 'code');
             }
@@ -709,22 +744,22 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             value: function _patch() {
                 Hooker.hookGlobal(function (exports) {
                     exports.__Dashboard.prototype.bindAutoHide = function () {
-                        var _this18 = this;
+                        var _this19 = this;
 
                         this._video.on('play', function () {
-                            _this18._hideTimeout = setTimeout(_this18.hide.bind(_this18), _this18._args.autoHide);
+                            _this19._hideTimeout = setTimeout(_this19.hide.bind(_this19), _this19._args.autoHide);
                         });
                         this._video.on('pause', function () {
-                            _this18._hideTimeout && clearTimeout(_this18._hideTimeout);
-                            _this18.show();
+                            _this19._hideTimeout && clearTimeout(_this19._hideTimeout);
+                            _this19.show();
                         });
                         this._parent.addEventListener('mousemove', function () {
-                            _this18._hideTimeout && clearTimeout(_this18._hideTimeout);
-                            _this18.show();
-                            if (!_this18._isPaused()) _this18._hideTimeout = setTimeout(_this18.hide.bind(_this18), _this18._args.autoHide);
+                            _this19._hideTimeout && clearTimeout(_this19._hideTimeout);
+                            _this19.show();
+                            if (!_this19._isPaused()) _this19._hideTimeout = setTimeout(_this19.hide.bind(_this19), _this19._args.autoHide);
                         });
                         this._parent.addEventListener('mouseout', function () {
-                            if (!_this18._isPaused()) _this18.hide();
+                            if (!_this19._isPaused()) _this19.hide();
                         });
                     };
                     exports.__Dashboard.prototype._isPaused = function () {
@@ -732,11 +767,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     };
                     var show = exports.__Dashboard.prototype.show;
                     exports.__Dashboard.prototype.show = function () {
+                        this.emit('dashboardshow');
                         this._parent.style.cursor = '';
                         show.apply(this);
                     };
                     var hide = exports.__Dashboard.prototype.hide;
                     exports.__Dashboard.prototype.hide = function () {
+                        this.emit('dashboardhide');
                         this._parent.style.cursor = 'none'; // 隐藏鼠标
                         hide.apply(this);
                     };
@@ -747,8 +784,38 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return DashboardPatch;
     }(Patch);
 
-    var PlayerPatch = function (_Patch7) {
-        _inherits(PlayerPatch, _Patch7);
+    var TopAreaPatch = function (_Patch7) {
+        _inherits(TopAreaPatch, _Patch7);
+
+        function TopAreaPatch() {
+            _classCallCheck(this, TopAreaPatch);
+
+            return _possibleConstructorReturn(this, (TopAreaPatch.__proto__ || Object.getPrototypeOf(TopAreaPatch)).call(this));
+        }
+
+        _createClass(TopAreaPatch, [{
+            key: '_apply',
+            value: function _apply() {
+                Hooker.hookTopAreaAddEvent(function (that) {
+                    that.on('dashboardshow', function () {
+                        if (that._video.global.playerState.fullscreen) {
+                            that._showHideTop(true);
+                        }
+                    });
+                    that.on('dashboardhide', function () {
+                        if (that._video.global.playerState.fullscreen) {
+                            that._hideHideTop();
+                        }
+                    });
+                });
+            }
+        }]);
+
+        return TopAreaPatch;
+    }(Patch);
+
+    var PlayerPatch = function (_Patch8) {
+        _inherits(PlayerPatch, _Patch8);
 
         function PlayerPatch() {
             _classCallCheck(this, PlayerPatch);
@@ -911,8 +978,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
     var playerPatch = new PlayerPatch();
 
-    var KeyShortcutsPatch = function (_Patch8) {
-        _inherits(KeyShortcutsPatch, _Patch8);
+    var KeyShortcutsPatch = function (_Patch9) {
+        _inherits(KeyShortcutsPatch, _Patch9);
 
         function KeyShortcutsPatch() {
             _classCallCheck(this, KeyShortcutsPatch);
@@ -1074,8 +1141,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return KeyShortcutsPatch;
     }(Patch);
 
-    var MouseShortcutsPatch = function (_Patch9) {
-        _inherits(MouseShortcutsPatch, _Patch9);
+    var MouseShortcutsPatch = function (_Patch10) {
+        _inherits(MouseShortcutsPatch, _Patch10);
 
         function MouseShortcutsPatch() {
             _classCallCheck(this, MouseShortcutsPatch);
@@ -1093,6 +1160,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             key: '_prepare',
             value: function _prepare() {
                 playerPatch.install();
+                this._addStyle();
+            }
+        }, {
+            key: '_addStyle',
+            value: function _addStyle() {
+                GM_addStyle('\n                .h5-layer-conatiner {\n                    -webkit-user-select: none !important;\n                    -moz-user-select: none !important;\n                    -ms-user-select: none !important;\n                    user-select: none !important;\n                }\n                .h5-ext-layer-adsdk {\n                    display: none !important;\n                }\n            ');
             }
         }, {
             key: '_addListener',
@@ -1100,7 +1173,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 Hooker.hookPlayerInitServiceEvent(function (that) {
                     var timer = void 0;
                     var container = that.container.querySelector('.h5-layer-conatiner');
-                    container.addEventListener('click', function () {
+                    container.addEventListener('click', function (event) {
+                        if (event.target !== container) return;
                         if (timer) {
                             clearTimeout(timer);
                             timer = null;
@@ -1116,11 +1190,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                             timer = null;
                         }, 200);
                     });
-                    container.addEventListener('dblclick', function () {
-                        return that.toggleFullScreen();
+                    container.addEventListener('dblclick', function (event) {
+                        if (event.target !== container) return;
+                        that.toggleFullScreen();
                     });
                     container.addEventListener('wheel', function (event) {
-                        if (!that.isFullScreen()) return;
+                        if (event.target !== container || !that.isFullScreen()) return;
                         var delta = event.wheelDelta || event.detail || event.deltaY && -event.deltaY;
                         that.adjustVolume(delta > 0 ? 0.05 : -0.05);
                     });
@@ -1131,8 +1206,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return MouseShortcutsPatch;
     }(Patch);
 
-    var ShortcutsPatch = function (_Patch10) {
-        _inherits(ShortcutsPatch, _Patch10);
+    var ShortcutsPatch = function (_Patch11) {
+        _inherits(ShortcutsPatch, _Patch11);
 
         function ShortcutsPatch() {
             _classCallCheck(this, ShortcutsPatch);
@@ -1153,8 +1228,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return ShortcutsPatch;
     }(Patch);
 
-    var H5Patch = function (_Patch11) {
-        _inherits(H5Patch, _Patch11);
+    var H5Patch = function (_Patch12) {
+        _inherits(H5Patch, _Patch12);
 
         function H5Patch() {
             _classCallCheck(this, H5Patch);
@@ -1209,6 +1284,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
     function improveAutoHide() {
         new DashboardPatch().install();
+        new TopAreaPatch().install();
         Logger.log('改善控件与光标自动隐藏');
     }
 
