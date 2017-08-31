@@ -778,13 +778,29 @@
 
         _prepare() {
             playerPatch.install();
+            this._addStyle();
+        }
+
+        _addStyle() {
+            GM_addStyle(`
+                .h5-layer-conatiner {
+                    -webkit-user-select: none !important;
+                    -moz-user-select: none !important;
+                    -ms-user-select: none !important;
+                    user-select: none !important;
+                }
+                .h5-ext-layer-adsdk {
+                    display: none !important;
+                }
+            `);
         }
 
         _addListener() {
             Hooker.hookPlayerInitServiceEvent((that) => {
                 let timer;
                 const container = that.container.querySelector('.h5-layer-conatiner');
-                container.addEventListener('click', () => {
+                container.addEventListener('click', (event) => {
+                    if (event.target !== container) return;
                     if (timer) {
                         clearTimeout(timer);
                         timer = null;
@@ -800,9 +816,12 @@
                         timer = null;
                     }, 200);
                 });
-                container.addEventListener('dblclick', () => that.toggleFullScreen());
+                container.addEventListener('dblclick', (event) => {
+                    if (event.target !== container) return;
+                    that.toggleFullScreen();
+                });
                 container.addEventListener('wheel', (event) => {
-                    if (!that.isFullScreen()) return;
+                    if (event.target !== container || !that.isFullScreen()) return;
                     const delta = event.wheelDelta || event.detail || (event.deltaY && -event.deltaY);
                     that.adjustVolume(delta > 0 ? 0.05 : -0.05);
                 });
