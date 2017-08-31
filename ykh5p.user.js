@@ -190,6 +190,25 @@
             this.hookFactoryCall((...args) => {if (this._isAdServiceFactoryCall(args[1].exports)) cb(args[1].exports);});
         }
 
+        static _isTopAreaFactoryCall(exports = {}) {
+            return this._isEsModule(exports) && this._isFuction(exports.default) &&
+                   exports.default.prototype && exports.default.prototype.hasOwnProperty('_timerHandler');
+        }
+
+        static hookTopArea(cb = ()=>{}) {
+            this.hookFactoryCall((...args) => {if (this._isTopAreaFactoryCall(args[1].exports)) cb(args[1].exports);});
+        }
+
+        static hookTopAreaAddEvent(cb = ()=>{}) {
+            Hooker.hookTopArea((exports) => {
+                const _addEvent = exports.default.prototype._addEvent;
+                exports.default.prototype._addEvent = function() {
+                    cb(this);
+                    _addEvent.apply(this);
+                };
+            });
+        }
+
         static _extractArgsName(code) {
             return code.slice(code.indexOf('(') + 1, code.indexOf(')')).split(/\s*,\s*/);
         }
@@ -459,11 +478,13 @@
                 };
                 const show = exports.__Dashboard.prototype.show;
                 exports.__Dashboard.prototype.show = function() {
+                    this.emit('dashboardshow');
                     this._parent.style.cursor = '';
                     show.apply(this);
                 };
                 const hide = exports.__Dashboard.prototype.hide;
                 exports.__Dashboard.prototype.hide = function() {
+                    this.emit('dashboardhide');
                     this._parent.style.cursor = 'none'; // 隐藏鼠标
                     hide.apply(this);
                 };
@@ -471,6 +492,31 @@
         }
 
     }
+
+    class TopAreaPatch extends Patch {
+
+        constructor() {
+            super();
+        }
+
+        _apply() {
+            Hooker.hookTopAreaAddEvent((that) => {
+                that.on('dashboardshow', () => {
+                    if (that._video.global.playerState.fullscreen) {
+                        that._showHideTop(true);
+                    }
+                });
+                that.on('dashboardhide', () => {
+                    if (that._video.global.playerState.fullscreen) {
+                        that._hideHideTop();
+                    }
+                });
+            });
+        }
+
+    }
+
+
 
     class PlayerPatch extends Patch {
 
@@ -893,6 +939,7 @@
 
     function improveAutoHide() {
         (new DashboardPatch()).install();
+        (new TopAreaPatch()).install();
         Logger.log('改善控件与光标自动隐藏');
     }
 
