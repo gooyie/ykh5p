@@ -4,7 +4,7 @@
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.8.0
+// @version      0.8.1
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -516,6 +516,24 @@
 
     }
 
+    class AntiAdPatch extends Patch {
+
+        constructor() {
+            super();
+        }
+
+        _apply() {
+            Hooker.hookPlayer(this._hookPlayerCallback.bind(this));
+        }
+
+        _hookPlayerCallback(exports) {
+            exports.default.prototype._initAdEvent = function() {
+                this.global.cycleData.isFront = true;
+            };
+        }
+
+    }
+
     class WebFullscreen {
 
         constructor(elem) {
@@ -562,7 +580,6 @@
                     position: relative !important;
                     z-index: 23333333 !important;
                 }
-
                 .webfullscreen {
                     display: block !important;
                     position: fixed !important;
@@ -1042,5 +1059,7 @@
     improveQualityFallback();
     improveAutoHide();
     improveShortcuts();
+
+    (new AntiAdPatch()).install();
 
 })();

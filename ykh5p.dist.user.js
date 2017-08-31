@@ -16,7 +16,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.8.0
+// @version      0.8.1
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -814,6 +814,32 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return TopAreaPatch;
     }(Patch);
 
+    var AntiAdPatch = function (_Patch8) {
+        _inherits(AntiAdPatch, _Patch8);
+
+        function AntiAdPatch() {
+            _classCallCheck(this, AntiAdPatch);
+
+            return _possibleConstructorReturn(this, (AntiAdPatch.__proto__ || Object.getPrototypeOf(AntiAdPatch)).call(this));
+        }
+
+        _createClass(AntiAdPatch, [{
+            key: '_apply',
+            value: function _apply() {
+                Hooker.hookPlayer(this._hookPlayerCallback.bind(this));
+            }
+        }, {
+            key: '_hookPlayerCallback',
+            value: function _hookPlayerCallback(exports) {
+                exports.default.prototype._initAdEvent = function () {
+                    this.global.cycleData.isFront = true;
+                };
+            }
+        }]);
+
+        return AntiAdPatch;
+    }(Patch);
+
     var WebFullscreen = function () {
         function WebFullscreen(elem) {
             _classCallCheck(this, WebFullscreen);
@@ -862,15 +888,15 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }], [{
             key: 'addStyle',
             value: function addStyle() {
-                GM_addStyle('\n                .z-top {\n                    position: relative !important;\n                    z-index: 23333333 !important;\n                }\n\n                .webfullscreen {\n                    display: block !important;\n                    position: fixed !important;\n                    width: 100% !important;\n                    height: 100% !important;\n                    top: 0 !important;\n                    left: 0 !important;\n                    background: #000 !important;\n                    z-index: 23333333 !important;\n                }\n            ');
+                GM_addStyle('\n                .z-top {\n                    position: relative !important;\n                    z-index: 23333333 !important;\n                }\n                .webfullscreen {\n                    display: block !important;\n                    position: fixed !important;\n                    width: 100% !important;\n                    height: 100% !important;\n                    top: 0 !important;\n                    left: 0 !important;\n                    background: #000 !important;\n                    z-index: 23333333 !important;\n                }\n            ');
             }
         }]);
 
         return WebFullscreen;
     }();
 
-    var PlayerPatch = function (_Patch8) {
-        _inherits(PlayerPatch, _Patch8);
+    var PlayerPatch = function (_Patch9) {
+        _inherits(PlayerPatch, _Patch9);
 
         function PlayerPatch() {
             _classCallCheck(this, PlayerPatch);
@@ -1056,8 +1082,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
     var playerPatch = new PlayerPatch();
 
-    var KeyShortcutsPatch = function (_Patch9) {
-        _inherits(KeyShortcutsPatch, _Patch9);
+    var KeyShortcutsPatch = function (_Patch10) {
+        _inherits(KeyShortcutsPatch, _Patch10);
 
         function KeyShortcutsPatch() {
             _classCallCheck(this, KeyShortcutsPatch);
@@ -1221,8 +1247,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return KeyShortcutsPatch;
     }(Patch);
 
-    var MouseShortcutsPatch = function (_Patch10) {
-        _inherits(MouseShortcutsPatch, _Patch10);
+    var MouseShortcutsPatch = function (_Patch11) {
+        _inherits(MouseShortcutsPatch, _Patch11);
 
         function MouseShortcutsPatch() {
             _classCallCheck(this, MouseShortcutsPatch);
@@ -1287,8 +1313,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return MouseShortcutsPatch;
     }(Patch);
 
-    var ShortcutsPatch = function (_Patch11) {
-        _inherits(ShortcutsPatch, _Patch11);
+    var ShortcutsPatch = function (_Patch12) {
+        _inherits(ShortcutsPatch, _Patch12);
 
         function ShortcutsPatch() {
             _classCallCheck(this, ShortcutsPatch);
@@ -1309,8 +1335,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return ShortcutsPatch;
     }(Patch);
 
-    var H5Patch = function (_Patch12) {
-        _inherits(H5Patch, _Patch12);
+    var H5Patch = function (_Patch13) {
+        _inherits(H5Patch, _Patch13);
 
         function H5Patch() {
             _classCallCheck(this, H5Patch);
@@ -1383,4 +1409,6 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
     improveQualityFallback();
     improveAutoHide();
     improveShortcuts();
+
+    new AntiAdPatch().install();
 })();
