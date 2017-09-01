@@ -77,22 +77,22 @@
             return 'function' === typeof arg;
         }
 
-        static _isFactoryCall(args) { // module.exports, module, module.exports, require
+        static _isModuleCall(args) { // module.exports, module, module.exports, require
             return args.length === 4 && args[1] instanceof Object && args[1].hasOwnProperty('exports');
         }
 
-        static hookFactoryCall(cb = ()=>{}) {
-            this.hookCall((...args) => {if (this._isFactoryCall(args)) cb(...args);});
+        static hookModuleCall(cb = ()=>{}) {
+            this.hookCall((...args) => {if (this._isModuleCall(args)) cb(...args);});
         }
 
-        static _isUpsFactoryCall(exports = {}) {
+        static _isUpsModuleCall(exports = {}) {
             return this._isEsModule(exports) && this._isFuction(exports.default) &&
                    exports.default.prototype && exports.default.prototype.hasOwnProperty('getServieceUrl') &&
                    /\.id\s*=\s*"ups"/.test(exports.default.toString());
         }
 
         static hookUps(cb = ()=>{}) {
-            this.hookFactoryCall((...args) => {if (this._isUpsFactoryCall(args[1].exports)) cb(args[1].exports);});
+            this.hookModuleCall((...args) => {if (this._isUpsModuleCall(args[1].exports)) cb(args[1].exports);});
         }
 
         static hookUpsOnComplete(cb = ()=>{}) {
@@ -105,23 +105,23 @@
             });
         }
 
-        static _isLogoFactoryCall(exports = {}) {
+        static _isLogoModuleCall(exports = {}) {
             return this._isEsModule(exports) && this._isFuction(exports.default) &&
                    exports.default.prototype && exports.default.prototype.hasOwnProperty('reset') &&
                    /logo\.style\.display/.test(exports.default.prototype.reset.toString());
         }
 
         static hookLogo(cb = ()=>{}) {
-            this.hookFactoryCall((...args) => {if (this._isLogoFactoryCall(args[1].exports)) cb(args[1].exports);});
+            this.hookModuleCall((...args) => {if (this._isLogoModuleCall(args[1].exports)) cb(args[1].exports);});
         }
 
-        static _isSettingFactoryCall(exports = {}) {
+        static _isSettingModuleCall(exports = {}) {
             return this._isEsModule(exports) && this._isFuction(exports.default) &&
                    exports.default.prototype && exports.default.prototype.hasOwnProperty('setQuality');
         }
 
         static hookSetting(cb = ()=>{}) {
-            this.hookFactoryCall((...args) => {if (this._isSettingFactoryCall(args[1].exports)) cb(args[1].exports);});
+            this.hookModuleCall((...args) => {if (this._isSettingModuleCall(args[1].exports)) cb(args[1].exports);});
         }
 
         static hookRenderQulaity(cb = ()=>{}) {
@@ -144,13 +144,13 @@
             });
         }
 
-        static _isPlayerFactoryCall(exports = {}) {
+        static _isPlayerModuleCall(exports = {}) {
             return this._isEsModule(exports) && this._isFuction(exports.default) &&
                    exports.default.prototype && exports.default.prototype.hasOwnProperty('_resetPlayer');
         }
 
         static hookPlayer(cb = ()=>{}) {
-            this.hookFactoryCall((...args) => {if (this._isPlayerFactoryCall(args[1].exports)) cb(args[1].exports);});
+            this.hookModuleCall((...args) => {if (this._isPlayerModuleCall(args[1].exports)) cb(args[1].exports);});
         }
 
         static hookPlayerInitServiceEvent(cb = ()=>{}) {
@@ -163,40 +163,40 @@
             });
         }
 
-        static _isKeyShortcutsFactoryCall(exports = {}) {
+        static _isKeyShortcutsModuleCall(exports = {}) {
             return this._isEsModule(exports) && this._isFuction(exports.default) &&
                    exports.default.prototype && exports.default.prototype.hasOwnProperty('registerEvents');
         }
 
         static hookKeyShortcuts(cb = ()=>{}) {
-            this.hookFactoryCall((...args) => {if (this._isKeyShortcutsFactoryCall(args[1].exports)) cb(args[1].exports);});
+            this.hookModuleCall((...args) => {if (this._isKeyShortcutsModuleCall(args[1].exports)) cb(args[1].exports);});
         }
 
-        static _isTipsFactoryCall(exports = {}) {
+        static _isTipsModuleCall(exports = {}) {
             return this._isEsModule(exports) && this._isFuction(exports.default) &&
                    exports.default.prototype && exports.default.prototype.hasOwnProperty('showHintTips');
         }
 
         static hookTips(cb = ()=>{}) {
-            this.hookFactoryCall((...args) => {if (this._isTipsFactoryCall(args[1].exports)) cb(args[1].exports);});
+            this.hookModuleCall((...args) => {if (this._isTipsModuleCall(args[1].exports)) cb(args[1].exports);});
         }
 
-        static _isAdServiceFactoryCall(exports = {}) {
+        static _isAdServiceModuleCall(exports = {}) {
             return this._isEsModule(exports) && this._isFuction(exports.default) &&
                    exports.default.prototype && exports.default.prototype.hasOwnProperty('requestAdData');
         }
 
         static hookAdService(cb = ()=>{}) {
-            this.hookFactoryCall((...args) => {if (this._isAdServiceFactoryCall(args[1].exports)) cb(args[1].exports);});
+            this.hookModuleCall((...args) => {if (this._isAdServiceModuleCall(args[1].exports)) cb(args[1].exports);});
         }
 
-        static _isTopAreaFactoryCall(exports = {}) {
+        static _isTopAreaModuleCall(exports = {}) {
             return this._isEsModule(exports) && this._isFuction(exports.default) &&
                    exports.default.prototype && exports.default.prototype.hasOwnProperty('_timerHandler');
         }
 
         static hookTopArea(cb = ()=>{}) {
-            this.hookFactoryCall((...args) => {if (this._isTopAreaFactoryCall(args[1].exports)) cb(args[1].exports);});
+            this.hookModuleCall((...args) => {if (this._isTopAreaModuleCall(args[1].exports)) cb(args[1].exports);});
         }
 
         static hookTopAreaAddEvent(cb = ()=>{}) {
@@ -217,7 +217,7 @@
             return code.slice(code.indexOf('{') + 1, code.lastIndexOf('}'));
         }
 
-        static _isGlobalFactoryCall(exports = {}) {
+        static _isGlobalModuleCall(exports = {}) {
             return exports.SingleVideoControl && exports.MultiVideoControl;
         }
 
@@ -227,8 +227,8 @@
                 this._hookGlobalCodeCallbacks = [];
                 (mode === 'code' ? this._hookGlobalCodeCallbacks : this._hookGlobalCallbacks).push(cb);
 
-                this.hookFactoryCall((...args) => {
-                    if (this._isGlobalFactoryCall(args[1].exports)) {
+                this.hookModuleCall((...args) => {
+                    if (this._isGlobalModuleCall(args[1].exports)) {
                         if (this._hookGlobalCodeCallbacks.length > 0) {
                             let code = args[3].m[args[1].i].toString();
                             code = this._hookGlobalCodeCallbacks.reduce((c, cb) => cb(c), code);
