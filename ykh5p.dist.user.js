@@ -16,7 +16,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.8.1
+// @version      0.8.2
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -144,14 +144,14 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 return 'function' === typeof arg;
             }
         }, {
-            key: '_isFactoryCall',
-            value: function _isFactoryCall(args) {
+            key: '_isModuleCall',
+            value: function _isModuleCall(args) {
                 // module.exports, module, module.exports, require
                 return args.length === 4 && args[1] instanceof Object && args[1].hasOwnProperty('exports');
             }
         }, {
-            key: 'hookFactoryCall',
-            value: function hookFactoryCall() {
+            key: 'hookModuleCall',
+            value: function hookModuleCall() {
                 var _this = this;
 
                 var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
@@ -161,12 +161,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         args[_key7] = arguments[_key7];
                     }
 
-                    if (_this._isFactoryCall(args)) cb.apply(undefined, args);
+                    if (_this._isModuleCall(args)) cb.apply(undefined, args);
                 });
             }
         }, {
-            key: '_isUpsFactoryCall',
-            value: function _isUpsFactoryCall() {
+            key: '_isUpsModuleCall',
+            value: function _isUpsModuleCall() {
                 var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
                 return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('getServieceUrl') && /\.id\s*=\s*"ups"/.test(exports.default.toString());
@@ -178,12 +178,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
                 var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
 
-                this.hookFactoryCall(function () {
+                this.hookModuleCall(function () {
                     for (var _len8 = arguments.length, args = Array(_len8), _key8 = 0; _key8 < _len8; _key8++) {
                         args[_key8] = arguments[_key8];
                     }
 
-                    if (_this2._isUpsFactoryCall(args[1].exports)) cb(args[1].exports);
+                    if (_this2._isUpsModuleCall(args[1].exports)) cb(args[1].exports);
                 });
             }
         }, {
@@ -200,8 +200,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 });
             }
         }, {
-            key: '_isLogoFactoryCall',
-            value: function _isLogoFactoryCall() {
+            key: '_isLogoModuleCall',
+            value: function _isLogoModuleCall() {
                 var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
                 return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('reset') && /logo\.style\.display/.test(exports.default.prototype.reset.toString());
@@ -213,17 +213,17 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
                 var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
 
-                this.hookFactoryCall(function () {
+                this.hookModuleCall(function () {
                     for (var _len9 = arguments.length, args = Array(_len9), _key9 = 0; _key9 < _len9; _key9++) {
                         args[_key9] = arguments[_key9];
                     }
 
-                    if (_this3._isLogoFactoryCall(args[1].exports)) cb(args[1].exports);
+                    if (_this3._isLogoModuleCall(args[1].exports)) cb(args[1].exports);
                 });
             }
         }, {
-            key: '_isSettingFactoryCall',
-            value: function _isSettingFactoryCall() {
+            key: '_isSettingModuleCall',
+            value: function _isSettingModuleCall() {
                 var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
                 return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('setQuality');
@@ -235,12 +235,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
                 var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
 
-                this.hookFactoryCall(function () {
+                this.hookModuleCall(function () {
                     for (var _len10 = arguments.length, args = Array(_len10), _key10 = 0; _key10 < _len10; _key10++) {
                         args[_key10] = arguments[_key10];
                     }
 
-                    if (_this4._isSettingFactoryCall(args[1].exports)) cb(args[1].exports);
+                    if (_this4._isSettingModuleCall(args[1].exports)) cb(args[1].exports);
                 });
             }
         }, {
@@ -270,8 +270,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 });
             }
         }, {
-            key: '_isPlayerFactoryCall',
-            value: function _isPlayerFactoryCall() {
+            key: '_isPlayerModuleCall',
+            value: function _isPlayerModuleCall() {
                 var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
                 return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('_resetPlayer');
@@ -283,12 +283,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
                 var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
 
-                this.hookFactoryCall(function () {
+                this.hookModuleCall(function () {
                     for (var _len11 = arguments.length, args = Array(_len11), _key11 = 0; _key11 < _len11; _key11++) {
                         args[_key11] = arguments[_key11];
                     }
 
-                    if (_this5._isPlayerFactoryCall(args[1].exports)) cb(args[1].exports);
+                    if (_this5._isPlayerModuleCall(args[1].exports)) cb(args[1].exports);
                 });
             }
         }, {
@@ -305,8 +305,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 });
             }
         }, {
-            key: '_isKeyShortcutsFactoryCall',
-            value: function _isKeyShortcutsFactoryCall() {
+            key: '_isKeyShortcutsModuleCall',
+            value: function _isKeyShortcutsModuleCall() {
                 var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
                 return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('registerEvents');
@@ -318,17 +318,17 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
                 var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
 
-                this.hookFactoryCall(function () {
+                this.hookModuleCall(function () {
                     for (var _len12 = arguments.length, args = Array(_len12), _key12 = 0; _key12 < _len12; _key12++) {
                         args[_key12] = arguments[_key12];
                     }
 
-                    if (_this6._isKeyShortcutsFactoryCall(args[1].exports)) cb(args[1].exports);
+                    if (_this6._isKeyShortcutsModuleCall(args[1].exports)) cb(args[1].exports);
                 });
             }
         }, {
-            key: '_isTipsFactoryCall',
-            value: function _isTipsFactoryCall() {
+            key: '_isTipsModuleCall',
+            value: function _isTipsModuleCall() {
                 var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
                 return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('showHintTips');
@@ -340,17 +340,17 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
                 var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
 
-                this.hookFactoryCall(function () {
+                this.hookModuleCall(function () {
                     for (var _len13 = arguments.length, args = Array(_len13), _key13 = 0; _key13 < _len13; _key13++) {
                         args[_key13] = arguments[_key13];
                     }
 
-                    if (_this7._isTipsFactoryCall(args[1].exports)) cb(args[1].exports);
+                    if (_this7._isTipsModuleCall(args[1].exports)) cb(args[1].exports);
                 });
             }
         }, {
-            key: '_isAdServiceFactoryCall',
-            value: function _isAdServiceFactoryCall() {
+            key: '_isAdServiceModuleCall',
+            value: function _isAdServiceModuleCall() {
                 var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
                 return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('requestAdData');
@@ -362,17 +362,17 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
                 var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
 
-                this.hookFactoryCall(function () {
+                this.hookModuleCall(function () {
                     for (var _len14 = arguments.length, args = Array(_len14), _key14 = 0; _key14 < _len14; _key14++) {
                         args[_key14] = arguments[_key14];
                     }
 
-                    if (_this8._isAdServiceFactoryCall(args[1].exports)) cb(args[1].exports);
+                    if (_this8._isAdServiceModuleCall(args[1].exports)) cb(args[1].exports);
                 });
             }
         }, {
-            key: '_isTopAreaFactoryCall',
-            value: function _isTopAreaFactoryCall() {
+            key: '_isTopAreaModuleCall',
+            value: function _isTopAreaModuleCall() {
                 var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
                 return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('_timerHandler');
@@ -384,12 +384,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
                 var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
 
-                this.hookFactoryCall(function () {
+                this.hookModuleCall(function () {
                     for (var _len15 = arguments.length, args = Array(_len15), _key15 = 0; _key15 < _len15; _key15++) {
                         args[_key15] = arguments[_key15];
                     }
 
-                    if (_this9._isTopAreaFactoryCall(args[1].exports)) cb(args[1].exports);
+                    if (_this9._isTopAreaModuleCall(args[1].exports)) cb(args[1].exports);
                 });
             }
         }, {
@@ -406,6 +406,41 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 });
             }
         }, {
+            key: '_isPreviewLayerModuleCall',
+            value: function _isPreviewLayerModuleCall() {
+                var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
+                return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('setPreviewShow');
+            }
+        }, {
+            key: 'hookPreviewLayer',
+            value: function hookPreviewLayer() {
+                var _this10 = this;
+
+                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+
+                this.hookModuleCall(function () {
+                    for (var _len16 = arguments.length, args = Array(_len16), _key16 = 0; _key16 < _len16; _key16++) {
+                        args[_key16] = arguments[_key16];
+                    }
+
+                    if (_this10._isPreviewLayerModuleCall(args[1].exports)) cb(args[1].exports);
+                });
+            }
+        }, {
+            key: 'hookPreviewLayerBind',
+            value: function hookPreviewLayerBind() {
+                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+
+                Hooker.hookPreviewLayer(function (exports) {
+                    var bind = exports.default.prototype.bind;
+                    exports.default.prototype.bind = function () {
+                        cb(this);
+                        bind.apply(this);
+                    };
+                });
+            }
+        }, {
             key: '_extractArgsName',
             value: function _extractArgsName(code) {
                 return code.slice(code.indexOf('(') + 1, code.indexOf(')')).split(/\s*,\s*/);
@@ -416,8 +451,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 return code.slice(code.indexOf('{') + 1, code.lastIndexOf('}'));
             }
         }, {
-            key: '_isGlobalFactoryCall',
-            value: function _isGlobalFactoryCall() {
+            key: '_isGlobalModuleCall',
+            value: function _isGlobalModuleCall() {
                 var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
                 return exports.SingleVideoControl && exports.MultiVideoControl;
@@ -425,7 +460,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }, {
             key: 'hookGlobal',
             value: function hookGlobal() {
-                var _this10 = this;
+                var _this11 = this;
 
                 var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
                 var mode = arguments[1];
@@ -435,21 +470,21 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     this._hookGlobalCodeCallbacks = [];
                     (mode === 'code' ? this._hookGlobalCodeCallbacks : this._hookGlobalCallbacks).push(cb);
 
-                    this.hookFactoryCall(function () {
-                        for (var _len16 = arguments.length, args = Array(_len16), _key16 = 0; _key16 < _len16; _key16++) {
-                            args[_key16] = arguments[_key16];
+                    this.hookModuleCall(function () {
+                        for (var _len17 = arguments.length, args = Array(_len17), _key17 = 0; _key17 < _len17; _key17++) {
+                            args[_key17] = arguments[_key17];
                         }
 
-                        if (_this10._isGlobalFactoryCall(args[1].exports)) {
-                            if (_this10._hookGlobalCodeCallbacks.length > 0) {
+                        if (_this11._isGlobalModuleCall(args[1].exports)) {
+                            if (_this11._hookGlobalCodeCallbacks.length > 0) {
                                 var code = args[3].m[args[1].i].toString();
-                                code = _this10._hookGlobalCodeCallbacks.reduce(function (c, cb) {
+                                code = _this11._hookGlobalCodeCallbacks.reduce(function (c, cb) {
                                     return cb(c);
                                 }, code);
-                                var fn = new (Function.prototype.bind.apply(Function, [null].concat(_toConsumableArray(_this10._extractArgsName(code)), [_this10._extractFunctionBody(code)])))();
+                                var fn = new (Function.prototype.bind.apply(Function, [null].concat(_toConsumableArray(_this11._extractArgsName(code)), [_this11._extractFunctionBody(code)])))();
                                 fn.apply(args[0], args.slice(1));
                             }
-                            _this10._hookGlobalCallbacks.forEach(function (cb) {
+                            _this11._hookGlobalCallbacks.forEach(function (cb) {
                                 return cb(args[1].exports);
                             });
                         }
@@ -493,14 +528,14 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }, {
             key: 'hookDefine',
             value: function hookDefine(name) {
-                var _this11 = this;
+                var _this12 = this;
 
                 var cb = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
 
                 if (!this._hookDefineCallbacksMap) {
                     this._hookDefineCallbacksMap = new Map([[name, [cb]]]);
                     this.hookOz(function (oz) {
-                        var self = _this11;
+                        var self = _this12;
                         var define = oz.define;
                         oz.define = function (name, deps, block) {
                             if (self._hookDefineCallbacksMap.has(name)) {
@@ -722,6 +757,14 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             key: '_prepare',
             value: function _prepare() {
                 this._exposeDashboard();
+                Hooker.hookPreviewLayerBind(function (that) {
+                    that._el.addEventListener('mouseover', function () {
+                        return that.emit('mouseoverpreview');
+                    });
+                    that._el.addEventListener('mouseleave', function () {
+                        return that.emit('mouseleavepreview');
+                    });
+                });
             }
         }, {
             key: '_findVarName',
@@ -732,10 +775,10 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }, {
             key: '_exposeDashboard',
             value: function _exposeDashboard() {
-                var _this18 = this;
+                var _this19 = this;
 
                 Hooker.hookGlobal(function (code) {
-                    var varName = _this18._findVarName(code);
+                    var varName = _this19._findVarName(code);
                     return code.replace(/\.exports\s*=\s*(\w+)/, '$&;$1.__Dashboard=' + varName + ';');
                 }, 'code');
             }
@@ -744,26 +787,42 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             value: function _patch() {
                 Hooker.hookGlobal(function (exports) {
                     exports.__Dashboard.prototype.bindAutoHide = function () {
-                        var _this19 = this;
+                        var _this20 = this;
 
+                        this._el.addEventListener('mouseover', function () {
+                            return _this20._mouseover = true;
+                        });
+                        this._el.addEventListener('mouseleave', function () {
+                            return _this20._mouseover = false;
+                        });
+                        this.on('mouseoverpreview', function () {
+                            return _this20._mouseoverpreview = true;
+                        });
+                        this.on('mouseleavepreview', function () {
+                            return _this20._mouseoverpreview = false;
+                        });
                         this._video.on('play', function () {
-                            _this19._hideTimeout = setTimeout(_this19.hide.bind(_this19), _this19._args.autoHide);
+                            if (!_this20._mouseover && !_this20._mouseoverpreview) _this20._hideTimeout = setTimeout(_this20.hide.bind(_this20), _this20._args.autoHide);
                         });
                         this._video.on('pause', function () {
-                            _this19._hideTimeout && clearTimeout(_this19._hideTimeout);
-                            _this19.show();
+                            _this20._hideTimeout && clearTimeout(_this20._hideTimeout);
+                            _this20.isShow() || _this20.show();
                         });
                         this._parent.addEventListener('mousemove', function () {
-                            _this19._hideTimeout && clearTimeout(_this19._hideTimeout);
-                            _this19.show();
-                            if (!_this19._isPaused()) _this19._hideTimeout = setTimeout(_this19.hide.bind(_this19), _this19._args.autoHide);
+                            _this20._hideTimeout && clearTimeout(_this20._hideTimeout);
+                            _this20.isShow() || _this20.show();
+                            if (!_this20._isPaused() && !_this20._mouseover && !_this20._mouseoverpreview) _this20._hideTimeout = setTimeout(_this20.hide.bind(_this20), _this20._args.autoHide);
                         });
-                        this._parent.addEventListener('mouseout', function () {
-                            if (!_this19._isPaused()) _this19.hide();
+                        this._parent.addEventListener('mouseleave', function () {
+                            _this20._hideTimeout && clearTimeout(_this20._hideTimeout);
+                            if (!_this20._isPaused()) _this20.hide();
                         });
                     };
                     exports.__Dashboard.prototype._isPaused = function () {
                         return this._video._videoCore.video.paused;
+                    };
+                    exports.__Dashboard.prototype.isShow = function () {
+                        return this._el.style.display !== 'none';
                     };
                     var show = exports.__Dashboard.prototype.show;
                     exports.__Dashboard.prototype.show = function () {

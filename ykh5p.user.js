@@ -4,7 +4,7 @@
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.8.1
+// @version      0.8.2
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -205,6 +205,25 @@
                 exports.default.prototype._addEvent = function() {
                     cb(this);
                     _addEvent.apply(this);
+                };
+            });
+        }
+
+        static _isPreviewLayerModuleCall(exports = {}) {
+            return this._isEsModule(exports) && this._isFuction(exports.default) &&
+                   exports.default.prototype && exports.default.prototype.hasOwnProperty('setPreviewShow');
+        }
+
+        static hookPreviewLayer(cb = ()=>{}) {
+            this.hookModuleCall((...args) => {if (this._isPreviewLayerModuleCall(args[1].exports)) cb(args[1].exports);});
+        }
+
+        static hookPreviewLayerBind(cb = ()=>{}) {
+            Hooker.hookPreviewLayer((exports) => {
+                const bind = exports.default.prototype.bind;
+                exports.default.prototype.bind = function() {
+                    cb(this);
+                    bind.apply(this);
                 };
             });
         }
@@ -440,6 +459,10 @@
 
         _prepare() {
             this._exposeDashboard();
+            Hooker.hookPreviewLayerBind((that) => {
+                that._el.addEventListener('mouseover', () => that.emit('mouseoverpreview'));
+                that._el.addEventListener('mouseleave', () => that.emit('mouseleavepreview'));
+            });
         }
 
         _findVarName(code) {
@@ -456,25 +479,34 @@
         _patch() {
             Hooker.hookGlobal((exports) => {
                 exports.__Dashboard.prototype.bindAutoHide = function() {
+                    this._el.addEventListener('mouseover', () => this._mouseover = true);
+                    this._el.addEventListener('mouseleave', () => this._mouseover = false);
+                    this.on('mouseoverpreview', () => this._mouseoverpreview = true);
+                    this.on('mouseleavepreview', () => this._mouseoverpreview = false);
                     this._video.on('play', () => {
-                        this._hideTimeout = setTimeout(this.hide.bind(this), this._args.autoHide);
+                        if (!this._mouseover && !this._mouseoverpreview)
+                            this._hideTimeout = setTimeout(this.hide.bind(this), this._args.autoHide);
                     });
                     this._video.on('pause', () => {
                         this._hideTimeout && clearTimeout(this._hideTimeout);
-                        this.show();
+                        this.isShow() || this.show();
                     });
                     this._parent.addEventListener('mousemove', () => {
                         this._hideTimeout && clearTimeout(this._hideTimeout);
-                        this.show();
-                        if (!this._isPaused())
+                        this.isShow() || this.show();
+                        if (!this._isPaused() && !this._mouseover && !this._mouseoverpreview)
                             this._hideTimeout = setTimeout(this.hide.bind(this), this._args.autoHide);
                     });
-                    this._parent.addEventListener('mouseout', () => {
+                    this._parent.addEventListener('mouseleave', () => {
+                        this._hideTimeout && clearTimeout(this._hideTimeout);
                         if (!this._isPaused()) this.hide();
                     });
                 };
                 exports.__Dashboard.prototype._isPaused = function() {
                     return this._video._videoCore.video.paused;
+                };
+                exports.__Dashboard.prototype.isShow = function() {
+                    return this._el.style.display !== 'none';
                 };
                 const show = exports.__Dashboard.prototype.show;
                 exports.__Dashboard.prototype.show = function() {
