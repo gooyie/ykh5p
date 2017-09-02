@@ -1231,6 +1231,11 @@
         Logger.log('启用html5播放器');
     }
 
+    function recoverPlayer() {
+        sessionStorage.removeItem('P_l_h5');
+        Logger.log('恢复原播放器');
+    }
+
     function blockAds() {
         (new AdBlockPatch()).install();
         (new AntiAdPatch()).install();
@@ -1271,6 +1276,7 @@
 //=============================================================================
 
     enableH5Player();
+    window.addEventListener('unload', () => recoverPlayer()); // 禁用脚本刷新页面可恢复播放器
     blockAds();
     invalidateWatermarks();
     invalidateQualityLimitation();
