@@ -228,6 +228,16 @@
             });
         }
 
+        static _isSettingSeriesComponentModuleCall(exports = {}) {
+            return this._isEsModule(exports) && this._isFuction(exports.default) &&
+                   exports.default.prototype && exports.default.prototype.hasOwnProperty('_addEvent') &&
+                   exports.default.prototype._addEvent.toString().includes('seriesliseLayer');
+        }
+
+        static hookSettingSeries(cb = ()=>{}) {
+            this.hookModuleCall((...args) => {if (this._isSettingSeriesComponentModuleCall(args[1].exports)) cb(args[1].exports);});
+        }
+
         static _extractArgsName(code) {
             return code.slice(code.indexOf('(') + 1, code.indexOf(')')).split(/\s*,\s*/);
         }
@@ -558,6 +568,32 @@
             });
         }
 
+    }
+
+    class SettingSeriesPatch extends Patch {
+
+        constructor() {
+            super();
+        }
+
+        _apply() {
+            Hooker.hookSettingSeries((exports) => { // 网页全屏显示选集
+                const _addEvent = exports.default.prototype._addEvent;
+                exports.default.prototype._addEvent = function() {
+                    _addEvent.apply(this);
+                    this.on('webfullscreen', (isWebFullscreen) => {
+                        if (isWebFullscreen) {
+                            if (this.seriesList.length > 1)
+                                this._el.style.display = 'inline-block';
+                        } else {
+                            this._el.style.display = 'none';
+                            this._el.classList.remove('cliced');
+                            this.emit('seriesliseLayer', false);
+                        }
+                    });
+                };
+            });
+        }
     }
 
     class AntiAdPatch extends Patch {
@@ -1090,6 +1126,7 @@
     function improveAutoHide() {
         (new DashboardPatch()).install();
         (new TopAreaPatch()).install();
+        (new SettingSeriesPatch()).install();
         Logger.log('改善控件与光标自动隐藏');
     }
 
