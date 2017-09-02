@@ -16,7 +16,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.8.2
+// @version      0.9.0
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -292,15 +292,33 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 });
             }
         }, {
-            key: 'hookPlayerInitServiceEvent',
-            value: function hookPlayerInitServiceEvent() {
+            key: 'hookInitPlayerEvent',
+            value: function hookInitPlayerEvent() {
                 var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
 
                 Hooker.hookPlayer(function (exports) {
-                    var _initServiceEvent = exports.default.prototype._initServiceEvent;
-                    exports.default.prototype._initServiceEvent = function () {
+                    var _initPlayerEvent = exports.default.prototype._initPlayerEvent;
+                    exports.default.prototype._initPlayerEvent = function () {
                         cb(this);
-                        _initServiceEvent.apply(this);
+                        _initPlayerEvent.apply(this);
+                    };
+                });
+            }
+        }, {
+            key: 'hookResetPlayerAfter',
+            value: function hookResetPlayerAfter() {
+                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+
+                Hooker.hookPlayer(function (exports) {
+                    var _resetPlayer = exports.default.prototype._resetPlayer;
+                    exports.default.prototype._resetPlayer = function () {
+                        try {
+                            _resetPlayer.apply(this);
+                        } catch (err) {
+                            // 忽略 ykSDK.destroyAd 异常
+                            if (!err.stack.includes('destroyAd')) throw err;
+                        }
+                        cb(this);
                     };
                 });
             }
@@ -441,6 +459,107 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 });
             }
         }, {
+            key: '_isSettingSeriesComponentModuleCall',
+            value: function _isSettingSeriesComponentModuleCall() {
+                var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
+                return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('_addEvent') && exports.default.prototype._addEvent.toString().includes('seriesliseLayer');
+            }
+        }, {
+            key: 'hookSettingSeries',
+            value: function hookSettingSeries() {
+                var _this11 = this;
+
+                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+
+                this.hookModuleCall(function () {
+                    for (var _len17 = arguments.length, args = Array(_len17), _key17 = 0; _key17 < _len17; _key17++) {
+                        args[_key17] = arguments[_key17];
+                    }
+
+                    if (_this11._isSettingSeriesComponentModuleCall(args[1].exports)) cb(args[1].exports);
+                });
+            }
+        }, {
+            key: '_isGlobalModuleCall',
+            value: function _isGlobalModuleCall() {
+                var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
+                return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('resetConfig');
+            }
+        }, {
+            key: 'hookGlobal',
+            value: function hookGlobal() {
+                var _this12 = this;
+
+                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+
+                this.hookModuleCall(function () {
+                    for (var _len18 = arguments.length, args = Array(_len18), _key18 = 0; _key18 < _len18; _key18++) {
+                        args[_key18] = arguments[_key18];
+                    }
+
+                    if (_this12._isGlobalModuleCall(args[1].exports)) cb(args[1].exports);
+                });
+            }
+        }, {
+            key: 'hookGlobalConstructorAfter',
+            value: function hookGlobalConstructorAfter() {
+                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+
+                Hooker.hookGlobal(function (exports) {
+                    var constructor = exports.default;
+                    exports.default = function () {
+                        for (var _len19 = arguments.length, args = Array(_len19), _key19 = 0; _key19 < _len19; _key19++) {
+                            args[_key19] = arguments[_key19];
+                        }
+
+                        constructor.apply(this, args);
+                        cb(this);
+                    };
+                    exports.default.prototype = constructor.prototype;
+                });
+            }
+        }, {
+            key: 'hookGlobalInit',
+            value: function hookGlobalInit() {
+                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+
+                Hooker.hookGlobal(function (exports) {
+                    var init = exports.default.prototype.init;
+                    exports.default.prototype.init = function (config) {
+                        cb(config, this);
+                        init.apply(this, [config]);
+                    };
+                });
+            }
+        }, {
+            key: 'hookGlobalDeal',
+            value: function hookGlobalDeal() {
+                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+
+                Hooker.hookGlobal(function (exports) {
+                    var deal = exports.default.prototype.deal;
+                    exports.default.prototype.deal = function () {
+                        cb(this);
+                        deal.apply(this);
+                    };
+                });
+            }
+        }, {
+            key: 'hookGlobalResetAfter',
+            value: function hookGlobalResetAfter() {
+                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+
+                Hooker.hookGlobal(function (exports) {
+                    var reset = exports.default.prototype.reset;
+                    exports.default.prototype.reset = function () {
+                        reset.apply(this);
+                        cb(this);
+                    };
+                });
+            }
+        }, {
             key: '_extractArgsName',
             value: function _extractArgsName(code) {
                 return code.slice(code.indexOf('(') + 1, code.indexOf(')')).split(/\s*,\s*/);
@@ -451,46 +570,46 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 return code.slice(code.indexOf('{') + 1, code.lastIndexOf('}'));
             }
         }, {
-            key: '_isGlobalModuleCall',
-            value: function _isGlobalModuleCall() {
+            key: '_isBaseModuleCall',
+            value: function _isBaseModuleCall() {
                 var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
                 return exports.SingleVideoControl && exports.MultiVideoControl;
             }
         }, {
-            key: 'hookGlobal',
-            value: function hookGlobal() {
-                var _this11 = this;
+            key: 'hookBase',
+            value: function hookBase() {
+                var _this13 = this;
 
                 var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
                 var mode = arguments[1];
 
-                if (!this._hookGlobalCallbacks) {
-                    this._hookGlobalCallbacks = [];
-                    this._hookGlobalCodeCallbacks = [];
-                    (mode === 'code' ? this._hookGlobalCodeCallbacks : this._hookGlobalCallbacks).push(cb);
+                if (!this._hookBaseCallbacks) {
+                    this._hookBaseCallbacks = [];
+                    this._hookBaseCodeCallbacks = [];
+                    (mode === 'code' ? this._hookBaseCodeCallbacks : this._hookBaseCallbacks).push(cb);
 
                     this.hookModuleCall(function () {
-                        for (var _len17 = arguments.length, args = Array(_len17), _key17 = 0; _key17 < _len17; _key17++) {
-                            args[_key17] = arguments[_key17];
+                        for (var _len20 = arguments.length, args = Array(_len20), _key20 = 0; _key20 < _len20; _key20++) {
+                            args[_key20] = arguments[_key20];
                         }
 
-                        if (_this11._isGlobalModuleCall(args[1].exports)) {
-                            if (_this11._hookGlobalCodeCallbacks.length > 0) {
+                        if (_this13._isBaseModuleCall(args[1].exports)) {
+                            if (_this13._hookBaseCodeCallbacks.length > 0) {
                                 var code = args[3].m[args[1].i].toString();
-                                code = _this11._hookGlobalCodeCallbacks.reduce(function (c, cb) {
+                                code = _this13._hookBaseCodeCallbacks.reduce(function (c, cb) {
                                     return cb(c);
                                 }, code);
-                                var fn = new (Function.prototype.bind.apply(Function, [null].concat(_toConsumableArray(_this11._extractArgsName(code)), [_this11._extractFunctionBody(code)])))();
+                                var fn = new (Function.prototype.bind.apply(Function, [null].concat(_toConsumableArray(_this13._extractArgsName(code)), [_this13._extractFunctionBody(code)])))();
                                 fn.apply(args[0], args.slice(1));
                             }
-                            _this11._hookGlobalCallbacks.forEach(function (cb) {
+                            _this13._hookBaseCallbacks.forEach(function (cb) {
                                 return cb(args[1].exports);
                             });
                         }
                     });
                 } else {
-                    (mode === 'code' ? this._hookGlobalCodeCallbacks : this._hookGlobalCallbacks).push(cb);
+                    (mode === 'code' ? this._hookBaseCodeCallbacks : this._hookBaseCallbacks).push(cb);
                 }
             }
         }, {
@@ -501,10 +620,10 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 if (!this._hookOzCallbacks) {
                     var self = this;
                     this._hookOzCallbacks = [cb];
-                    var window = unsafeWindow;
-                    var oz = window.oz; // oz 可能先于脚本执行
+                    var _window = unsafeWindow;
+                    var oz = _window.oz; // oz 可能先于脚本执行
 
-                    Reflect.defineProperty(window, 'oz', {
+                    Reflect.defineProperty(_window, 'oz', {
                         get: function get() {
                             return oz;
                         },
@@ -520,7 +639,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         }
                     });
 
-                    if (oz) window.oz = oz; // oz 先于脚本执行
+                    if (oz) _window.oz = oz; // oz 先于脚本执行
                 } else {
                     this._hookOzCallbacks.push(cb);
                 }
@@ -528,14 +647,14 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }, {
             key: 'hookDefine',
             value: function hookDefine(name) {
-                var _this12 = this;
+                var _this14 = this;
 
                 var cb = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
 
                 if (!this._hookDefineCallbacksMap) {
                     this._hookDefineCallbacksMap = new Map([[name, [cb]]]);
                     this.hookOz(function (oz) {
-                        var self = _this12;
+                        var self = _this14;
                         var define = oz.define;
                         oz.define = function (name, deps, block) {
                             if (self._hookDefineCallbacksMap.has(name)) {
@@ -598,7 +717,11 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             value: function _apply() {
                 Hooker.hookAdService(function (exports) {
                     exports.default.prototype.requestAdData = function (arg) {
-                        this.fail(arg, { code: '404', message: 'error' });
+                        var _this16 = this;
+
+                        setTimeout(function () {
+                            _this16.fail(arg, { code: '404', message: 'error' });
+                        }, 0);
                     };
                 });
             }
@@ -775,63 +898,69 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }, {
             key: '_exposeDashboard',
             value: function _exposeDashboard() {
-                var _this19 = this;
+                var _this22 = this;
 
-                Hooker.hookGlobal(function (code) {
-                    var varName = _this19._findVarName(code);
+                Hooker.hookBase(function (code) {
+                    var varName = _this22._findVarName(code);
                     return code.replace(/\.exports\s*=\s*(\w+)/, '$&;$1.__Dashboard=' + varName + ';');
                 }, 'code');
             }
         }, {
             key: '_patch',
             value: function _patch() {
-                Hooker.hookGlobal(function (exports) {
-                    exports.__Dashboard.prototype.bindAutoHide = function () {
-                        var _this20 = this;
+                Hooker.hookBase(function (exports) {
+                    var proto = exports.__Dashboard.prototype;
+
+                    proto.bindAutoHide = function () {
+                        var _this23 = this;
 
                         this._el.addEventListener('mouseover', function () {
-                            return _this20._mouseover = true;
+                            return _this23._mouseover = true;
                         });
                         this._el.addEventListener('mouseleave', function () {
-                            return _this20._mouseover = false;
+                            return _this23._mouseover = false;
                         });
                         this.on('mouseoverpreview', function () {
-                            return _this20._mouseoverpreview = true;
+                            return _this23._mouseoverpreview = true;
                         });
                         this.on('mouseleavepreview', function () {
-                            return _this20._mouseoverpreview = false;
+                            return _this23._mouseoverpreview = false;
                         });
                         this._video.on('play', function () {
-                            if (!_this20._mouseover && !_this20._mouseoverpreview) _this20._hideTimeout = setTimeout(_this20.hide.bind(_this20), _this20._args.autoHide);
+                            if (!_this23._mouseover && !_this23._mouseoverpreview) _this23._hideTimeout = setTimeout(_this23.hide.bind(_this23), _this23._args.autoHide);
                         });
                         this._video.on('pause', function () {
-                            _this20._hideTimeout && clearTimeout(_this20._hideTimeout);
-                            _this20.isShow() || _this20.show();
+                            _this23._hideTimeout && clearTimeout(_this23._hideTimeout);
+                            _this23.isShow() || _this23.show();
                         });
                         this._parent.addEventListener('mousemove', function () {
-                            _this20._hideTimeout && clearTimeout(_this20._hideTimeout);
-                            _this20.isShow() || _this20.show();
-                            if (!_this20._isPaused() && !_this20._mouseover && !_this20._mouseoverpreview) _this20._hideTimeout = setTimeout(_this20.hide.bind(_this20), _this20._args.autoHide);
+                            _this23._hideTimeout && clearTimeout(_this23._hideTimeout);
+                            _this23.isShow() || _this23.show();
+                            if (!_this23._isPaused() && !_this23._mouseover && !_this23._mouseoverpreview) _this23._hideTimeout = setTimeout(_this23.hide.bind(_this23), _this23._args.autoHide);
                         });
                         this._parent.addEventListener('mouseleave', function () {
-                            _this20._hideTimeout && clearTimeout(_this20._hideTimeout);
-                            if (!_this20._isPaused()) _this20.hide();
+                            _this23._hideTimeout && clearTimeout(_this23._hideTimeout);
+                            if (!_this23._isPaused()) _this23.hide();
                         });
                     };
-                    exports.__Dashboard.prototype._isPaused = function () {
+
+                    proto._isPaused = function () {
                         return this._video._videoCore.video.paused;
                     };
-                    exports.__Dashboard.prototype.isShow = function () {
+
+                    proto.isShow = function () {
                         return this._el.style.display !== 'none';
                     };
-                    var show = exports.__Dashboard.prototype.show;
-                    exports.__Dashboard.prototype.show = function () {
+
+                    var show = proto.show;
+                    proto.show = function () {
                         this.emit('dashboardshow');
                         this._parent.style.cursor = '';
                         show.apply(this);
                     };
-                    var hide = exports.__Dashboard.prototype.hide;
-                    exports.__Dashboard.prototype.hide = function () {
+
+                    var hide = proto.hide;
+                    proto.hide = function () {
                         this.emit('dashboardhide');
                         this._parent.style.cursor = 'none'; // 隐藏鼠标
                         hide.apply(this);
@@ -856,16 +985,25 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             key: '_apply',
             value: function _apply() {
                 Hooker.hookTopAreaAddEvent(function (that) {
+                    that.on('webfullscreen', function (isWebFullscreen) {
+                        isWebFullscreen ? that._showHideTop(true) : that._hideHideTop();
+                    });
                     that.on('dashboardshow', function () {
-                        if (that._video.global.playerState.fullscreen) {
+                        var playerState = that._video.global.playerState;
+                        if (playerState.fullscreen || playerState.webfullscreen) {
                             that._showHideTop(true);
                         }
                     });
                     that.on('dashboardhide', function () {
-                        if (that._video.global.playerState.fullscreen) {
+                        var playerState = that._video.global.playerState;
+                        if (playerState.fullscreen || playerState.webfullscreen) {
                             that._hideHideTop();
                         }
                     });
+                });
+                Hooker.hookResetPlayerAfter(function (that) {
+                    // 网页全屏播放上下集重置播放器后显示顶部控件
+                    if (!that.global.playerState.fullscreen) that._player.control.emit('webfullscreen', that.global.playerState.webfullscreen);
                 });
             }
         }]);
@@ -873,8 +1011,84 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return TopAreaPatch;
     }(Patch);
 
-    var AntiAdPatch = function (_Patch8) {
-        _inherits(AntiAdPatch, _Patch8);
+    var SettingSeriesPatch = function (_Patch8) {
+        _inherits(SettingSeriesPatch, _Patch8);
+
+        function SettingSeriesPatch() {
+            _classCallCheck(this, SettingSeriesPatch);
+
+            return _possibleConstructorReturn(this, (SettingSeriesPatch.__proto__ || Object.getPrototypeOf(SettingSeriesPatch)).call(this));
+        }
+
+        _createClass(SettingSeriesPatch, [{
+            key: '_apply',
+            value: function _apply() {
+                Hooker.hookSettingSeries(function (exports) {
+                    // 网页全屏显示选集
+                    var _addEvent = exports.default.prototype._addEvent;
+                    exports.default.prototype._addEvent = function () {
+                        var _this26 = this;
+
+                        _addEvent.apply(this);
+                        this.on('webfullscreen', function (isWebFullscreen) {
+                            if (isWebFullscreen) {
+                                if (_this26.seriesList.length > 1) _this26._el.style.display = 'inline-block';
+                            } else {
+                                _this26._el.style.display = 'none';
+                                _this26._el.classList.remove('cliced');
+                                _this26.emit('seriesliseLayer', false);
+                            }
+                        });
+                    };
+                });
+            }
+        }]);
+
+        return SettingSeriesPatch;
+    }(Patch);
+
+    var ContinuePlayPatch = function (_Patch9) {
+        _inherits(ContinuePlayPatch, _Patch9);
+
+        function ContinuePlayPatch() {
+            _classCallCheck(this, ContinuePlayPatch);
+
+            return _possibleConstructorReturn(this, (ContinuePlayPatch.__proto__ || Object.getPrototypeOf(ContinuePlayPatch)).call(this));
+        }
+
+        _createClass(ContinuePlayPatch, [{
+            key: '_apply',
+            value: function _apply() {
+                var _this28 = this;
+
+                Hooker.hookInitPlayerEvent(function (that) {
+                    // 视频播放结束处理
+                    that._player.control.on('ended', that._onEnd.bind(that));
+                    that._player.control.on('ended', function () {
+                        return _this28._onEnd(that);
+                    });
+                });
+            }
+        }, {
+            key: '_onEnd',
+            value: function _onEnd(that) {
+                var config = that.global.config;
+                var playerState = that.global.playerState;
+                if (config.continuePlay && config.nextVid && !playerState.fullscreen) {
+                    if (playerState.webfullscreen) {
+                        that.playByVid({ vid: that.global.config.nextVid });
+                    } else {
+                        that.gotoVideo(that.global.config.nextVid);
+                    }
+                }
+            }
+        }]);
+
+        return ContinuePlayPatch;
+    }(Patch);
+
+    var AntiAdPatch = function (_Patch10) {
+        _inherits(AntiAdPatch, _Patch10);
 
         function AntiAdPatch() {
             _classCallCheck(this, AntiAdPatch);
@@ -885,14 +1099,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         _createClass(AntiAdPatch, [{
             key: '_apply',
             value: function _apply() {
-                Hooker.hookPlayer(this._hookPlayerCallback.bind(this));
-            }
-        }, {
-            key: '_hookPlayerCallback',
-            value: function _hookPlayerCallback(exports) {
-                exports.default.prototype._initAdEvent = function () {
-                    this.global.cycleData.isFront = true;
-                };
+                Hooker.hookGlobalConstructorAfter(function (that) {
+                    return that.cycleData.isFront = true;
+                });
+                Hooker.hookGlobalResetAfter(function (that) {
+                    return that.cycleData.isFront = true;
+                });
             }
         }]);
 
@@ -954,8 +1166,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return WebFullscreen;
     }();
 
-    var PlayerPatch = function (_Patch9) {
-        _inherits(PlayerPatch, _Patch9);
+    var PlayerPatch = function (_Patch11) {
+        _inherits(PlayerPatch, _Patch11);
 
         function PlayerPatch() {
             _classCallCheck(this, PlayerPatch);
@@ -972,6 +1184,15 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }, {
             key: '_prepare',
             value: function _prepare() {
+                this._customTip();
+                this._disablePlayAfterSeek();
+                this._addPrevInfo();
+                this._playAfterPlayerReset();
+                new ContinuePlayPatch().install();
+            }
+        }, {
+            key: '_customTip',
+            value: function _customTip() {
                 Hooker.hookTips(function (exports) {
                     var showHintTips = exports.default.prototype.showHintTips;
                     exports.default.prototype.showHintTips = function (code, info) {
@@ -982,8 +1203,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         }
                     };
                 });
-                Hooker.hookGlobal(function (exports) {
-                    // 单video seek 后不自动播放
+            }
+        }, {
+            key: '_disablePlayAfterSeek',
+            value: function _disablePlayAfterSeek() {
+                // SingleVideoControl seek 后不自动播放
+                Hooker.hookBase(function (exports) {
                     var _setCurrentTime = exports.SingleVideoControl.prototype._setCurrentTime;
                     exports.SingleVideoControl.prototype._setCurrentTime = function (time) {
                         var play = this.video.play;
@@ -991,6 +1216,33 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         _setCurrentTime.apply(this, [time]);
                         this.video.play = play;
                     };
+                });
+            }
+        }, {
+            key: '_addPrevInfo',
+            value: function _addPrevInfo() {
+                Hooker.hookGlobalDeal(function (that) {
+                    if (that.ups && that.ups.videoData && that.ups.programList && that.ups.programList.videoList) {
+                        var list = that.ups.programList.videoList;
+                        var currVid = that.ups.videoData.id;
+                        var prevSeq = list.find(function (item) {
+                            return parseInt(item.vid) === currVid;
+                        }).seq - 1;
+                        if (prevSeq > 0) {
+                            var prevVideo = list.find(function (item) {
+                                return parseInt(item.seq) === prevSeq;
+                            });
+                            that.ups.programList.prevVideo = prevVideo;
+                            that._config.prevVid = prevVideo.encodevid;
+                        }
+                    }
+                });
+            }
+        }, {
+            key: '_playAfterPlayerReset',
+            value: function _playAfterPlayerReset() {
+                Hooker.hookResetPlayerAfter(function (that) {
+                    if (that.global.playerState.state === 'playerreset') that.play();
                 });
             }
         }, {
@@ -1003,8 +1255,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             value: function _hookPlayerCallback(exports) {
                 var proto = exports.default.prototype;
 
-                var _init = exports.default.prototype._init;
-                exports.default.prototype._init = function () {
+                var _init = proto._init;
+                proto._init = function () {
                     _init.apply(this);
                     WebFullscreen.addStyle();
                     this._webfullscreen = new WebFullscreen(this.container);
@@ -1074,10 +1326,14 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
                 proto.enterWebFullscreen = function () {
                     this._webfullscreen.enter();
+                    this.global.playerState = { webfullscreen: true };
+                    this._player.control.emit('webfullscreen', true);
                 };
 
                 proto.exitWebFullscreen = function () {
                     this._webfullscreen.exit();
+                    this.global.playerState = { webfullscreen: false };
+                    this._player.control.emit('webfullscreen', false);
                 };
 
                 proto.toggleWebFullscreen = function () {
@@ -1127,11 +1383,37 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 };
 
                 proto.playPrev = function () {
-                    // TODO:
+                    var prevVid = this.global.config.prevVid;
+                    if (prevVid) {
+                        if (this.isFullscreen() || this.isWebFullscreen()) {
+                            this.playByVid({ vid: prevVid });
+                        } else {
+                            this.gotoVideo(prevVid);
+                        }
+                        this._showTip('播放上一集');
+                    } else {
+                        this._showTip('没有上一集哦');
+                    }
                 };
 
-                proto.playNext = function () {
-                    // TODO:
+                var playNext = proto.playNext;
+                proto.playNext = function (data) {
+                    if (data) playNext.apply(this, [data]);
+                    var nextVid = this.global.config.nextVid;
+                    if (nextVid) {
+                        if (this.isFullscreen() || this.isWebFullscreen()) {
+                            this.playByVid({ vid: nextVid });
+                        } else {
+                            this.gotoVideo(nextVid);
+                        }
+                        this._showTip('播放下一集');
+                    } else {
+                        this._showTip('没有下一集哦');
+                    }
+                };
+
+                proto.gotoVideo = function (vid) {
+                    location.href = '//v.youku.com/v_show/id_' + vid + '.html';
                 };
             }
         }]);
@@ -1141,8 +1423,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
     var playerPatch = new PlayerPatch();
 
-    var KeyShortcutsPatch = function (_Patch10) {
-        _inherits(KeyShortcutsPatch, _Patch10);
+    var KeyShortcutsPatch = function (_Patch12) {
+        _inherits(KeyShortcutsPatch, _Patch12);
 
         function KeyShortcutsPatch() {
             _classCallCheck(this, KeyShortcutsPatch);
@@ -1187,8 +1469,10 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         // Spacebar
                         if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
                             var state = this._player.global.playerState.state;
-                            if (state === 'paused' || state === 'ended' || state === 'player.init') {
+                            if (['paused', 'player.init'].includes(state)) {
                                 this._player.play();
+                            } else if (state === 'ended') {
+                                this._player.replay();
                             } else {
                                 this._player.pause();
                             }
@@ -1306,8 +1590,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return KeyShortcutsPatch;
     }(Patch);
 
-    var MouseShortcutsPatch = function (_Patch11) {
-        _inherits(MouseShortcutsPatch, _Patch11);
+    var MouseShortcutsPatch = function (_Patch13) {
+        _inherits(MouseShortcutsPatch, _Patch13);
 
         function MouseShortcutsPatch() {
             _classCallCheck(this, MouseShortcutsPatch);
@@ -1335,7 +1619,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }, {
             key: '_addListener',
             value: function _addListener() {
-                Hooker.hookPlayerInitServiceEvent(function (that) {
+                Hooker.hookInitPlayerEvent(function (that) {
                     var timer = void 0;
                     var container = that.container.querySelector('.h5-layer-conatiner');
                     container.addEventListener('click', function (event) {
@@ -1347,8 +1631,10 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         }
                         timer = setTimeout(function () {
                             var state = that.global.playerState.state;
-                            if (state === 'paused' || state === 'ended' || state === 'player.init') {
+                            if (['paused', 'player.init'].includes(state)) {
                                 that.play();
+                            } else if (state === 'ended') {
+                                that.replay();
                             } else {
                                 that.pause();
                             }
@@ -1372,8 +1658,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return MouseShortcutsPatch;
     }(Patch);
 
-    var ShortcutsPatch = function (_Patch12) {
-        _inherits(ShortcutsPatch, _Patch12);
+    var ShortcutsPatch = function (_Patch14) {
+        _inherits(ShortcutsPatch, _Patch14);
 
         function ShortcutsPatch() {
             _classCallCheck(this, ShortcutsPatch);
@@ -1394,8 +1680,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return ShortcutsPatch;
     }(Patch);
 
-    var H5Patch = function (_Patch13) {
-        _inherits(H5Patch, _Patch13);
+    var H5Patch = function (_Patch15) {
+        _inherits(H5Patch, _Patch15);
 
         function H5Patch() {
             _classCallCheck(this, H5Patch);
@@ -1423,8 +1709,14 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         Logger.log('启用html5播放器');
     }
 
+    function recoverPlayer() {
+        sessionStorage.removeItem('P_l_h5');
+        Logger.log('恢复原播放器');
+    }
+
     function blockAds() {
         new AdBlockPatch().install();
+        new AntiAdPatch().install();
         Logger.log('和谐广告');
     }
 
@@ -1451,6 +1743,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
     function improveAutoHide() {
         new DashboardPatch().install();
         new TopAreaPatch().install();
+        new SettingSeriesPatch().install();
         Logger.log('改善控件与光标自动隐藏');
     }
 
@@ -1461,6 +1754,9 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
     //=============================================================================
 
     enableH5Player();
+    window.addEventListener('unload', function () {
+        return recoverPlayer();
+    }); // 禁用脚本刷新页面可恢复播放器
     blockAds();
     invalidateWatermarks();
     invalidateQualityLimitation();
@@ -1468,6 +1764,4 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
     improveQualityFallback();
     improveAutoHide();
     improveShortcuts();
-
-    new AntiAdPatch().install();
 })();
