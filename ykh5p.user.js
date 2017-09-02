@@ -153,12 +153,26 @@
             this.hookModuleCall((...args) => {if (this._isPlayerModuleCall(args[1].exports)) cb(args[1].exports);});
         }
 
-        static hookPlayerInitServiceEvent(cb = ()=>{}) {
+        static hookInitPlayerEvent(cb = ()=>{}) {
             Hooker.hookPlayer((exports) => {
-                const _initServiceEvent = exports.default.prototype._initServiceEvent;
-                exports.default.prototype._initServiceEvent = function() {
+                const _initPlayerEvent = exports.default.prototype._initPlayerEvent;
+                exports.default.prototype._initPlayerEvent = function() {
                     cb(this);
-                    _initServiceEvent.apply(this);
+                    _initPlayerEvent.apply(this);
+                };
+            });
+        }
+
+        static hookResetPlayerAfter(cb = ()=>{}) {
+            Hooker.hookPlayer((exports) => {
+                const _resetPlayer = exports.default.prototype._resetPlayer;
+                exports.default.prototype._resetPlayer = function() {
+                    try {
+                        _resetPlayer.apply(this);
+                    } catch (err) { // 忽略 ykSDK.destroyAd 异常
+                        if (!err.stack.includes('destroyAd')) throw err;
+                    }
+                    cb(this);
                 };
             });
         }
@@ -236,6 +250,35 @@
 
         static hookSettingSeries(cb = ()=>{}) {
             this.hookModuleCall((...args) => {if (this._isSettingSeriesComponentModuleCall(args[1].exports)) cb(args[1].exports);});
+        }
+
+        static _isGlobalModuleCall(exports = {}) {
+            return this._isEsModule(exports) && this._isFuction(exports.default) &&
+                   exports.default.prototype && exports.default.prototype.hasOwnProperty('resetConfig');
+        }
+
+        static hookGlobal(cb = ()=>{}) {
+            this.hookModuleCall((...args) => {if (this._isGlobalModuleCall(args[1].exports)) cb(args[1].exports);});
+        }
+
+        static hookGlobalInit(cb = ()=>{}) {
+            Hooker.hookGlobal((exports) => {
+                const init = exports.default.prototype.init;
+                exports.default.prototype.init = function(config) {
+                    cb(config, this);
+                    init.apply(this, [config]);
+                };
+            });
+        }
+
+        static hookGlobalDeal(cb = ()=>{}) {
+            Hooker.hookGlobal((exports) => {
+                const deal = exports.default.prototype.deal;
+                exports.default.prototype.deal = function() {
+                    cb(this);
+                    deal.apply(this);
+                };
+            });
         }
 
         static _extractArgsName(code) {
@@ -566,6 +609,10 @@
                     }
                 });
             });
+            Hooker.hookResetPlayerAfter((that) => { // 网页全屏播放上下集重置播放器后显示顶部控件
+                if (!that.global.playerState.fullscreen)
+                    that._player.control.emit('webfullscreen', that.global.playerState.webfullscreen);
+            });
         }
 
     }
@@ -686,6 +733,13 @@
         }
 
         _prepare() {
+            this._customTip();
+            this._disablePlayAfterSeek();
+            this._addPlayerEvent();
+            this._addPrevInfo();
+        }
+
+        _customTip() {
             Hooker.hookTips((exports) => {
                 const showHintTips = exports.default.prototype.showHintTips;
                 exports.default.prototype.showHintTips = function(code, info) {
@@ -696,6 +750,9 @@
                     }
                 };
             });
+        }
+
+        _disablePlayAfterSeek() { // SingleVideoControl seek 后不自动播放
             Hooker.hookBase((exports) => {
                 const _setCurrentTime = exports.SingleVideoControl.prototype._setCurrentTime;
                 exports.SingleVideoControl.prototype._setCurrentTime = function(time) {
@@ -704,6 +761,27 @@
                     _setCurrentTime.apply(this, [time]);
                     this.video.play = play;
                 };
+            });
+        }
+
+        _addPlayerEvent() {
+            Hooker.hookInitPlayerEvent((that) => { // 视频播放结束处理
+                that._player.control.on('ended', that._onEnd.bind(that));
+            });
+        }
+
+        _addPrevInfo() {
+            Hooker.hookGlobalDeal((that) => {
+                if (that.ups && that.ups.videoData && that.ups.programList && that.ups.programList.videoList) {
+                    const list = that.ups.programList.videoList;
+                    const currVid = that.ups.videoData.id;
+                    const prevSeq = list.find(item => parseInt(item.vid) === currVid).seq - 1;
+                    if (prevSeq > 0) {
+                        const prevVideo = list.find(item => parseInt(item.seq) === prevSeq);
+                        that.ups.programList.prevVideo = prevVideo;
+                        that._config.prevVid = prevVideo.encodevid;
+                    }
+                }
             });
         }
 
@@ -815,7 +893,6 @@
                 this._showTip('恢复播放速率');
             };
 
-
             proto.getFps = function() {
                 return 25; // 标清fps为15，标清以上fps为25。
             };
@@ -841,11 +918,37 @@
             };
 
             proto.playPrev = function() {
-                // TODO:
+                const prevVid = this.global.config.prevVid;
+                if (prevVid) {
+                    if (this.isFullscreen() || this.isWebFullscreen()) {
+                        this.playByVid({vid: prevVid});
+                    } else {
+                        this.gotoVideo(prevVid);
+                    }
+                    this._showTip('播放上一集');
+                } else {
+                    this._showTip('没有上一集哦');
+                }
             };
 
-            proto.playNext = function() {
-                // TODO:
+            const playNext = proto.playNext;
+            proto.playNext = function(data) {
+                if (data) playNext.apply(this, [data]);
+                const nextVid = this.global.config.nextVid;
+                if (nextVid) {
+                    if (this.isFullscreen() || this.isWebFullscreen()) {
+                        this.playByVid({vid: nextVid});
+                    } else {
+                        this.gotoVideo(nextVid);
+                    }
+                    this._showTip('播放下一集');
+                } else {
+                    this._showTip('没有下一集哦');
+                }
+            };
+
+            proto.gotoVideo = function(vid) {
+                location.href = `//v.youku.com/v_show/id_${vid}.html`;
             };
         }
 
@@ -889,8 +992,10 @@
             case 32: // Spacebar
                 if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
                     const state = this._player.global.playerState.state;
-                    if (state === 'paused' || state === 'ended' || state === 'player.init') {
+                    if (['paused', 'playerreset', 'player.init'].includes(state)) {
                         this._player.play();
+                    } else if (state === 'ended') {
+                        this._player.replay();
                     } else {
                         this._player.pause();
                     }
@@ -1027,7 +1132,7 @@
         }
 
         _addListener() {
-            Hooker.hookPlayerInitServiceEvent((that) => {
+            Hooker.hookInitPlayerEvent((that) => {
                 let timer;
                 const container = that.container.querySelector('.h5-layer-conatiner');
                 container.addEventListener('click', (event) => {
@@ -1039,8 +1144,10 @@
                     }
                     timer = setTimeout(() => {
                         const state = that.global.playerState.state;
-                        if (state === 'paused' || state === 'ended' || state === 'player.init') {
+                        if (['paused', 'playerreset', 'player.init'].includes(state)) {
                             that.play();
+                        } else if (state === 'ended') {
+                            that.replay();
                         } else {
                             that.pause();
                         }
