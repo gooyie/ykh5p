@@ -540,13 +540,18 @@
 
         _apply() {
             Hooker.hookTopAreaAddEvent((that) => {
+                that.on('webfullscreen', (isWebFullscreen) => {
+                    isWebFullscreen ? that._showHideTop(true) : that._hideHideTop();
+                });
                 that.on('dashboardshow', () => {
-                    if (that._video.global.playerState.fullscreen) {
+                    const playerState = that._video.global.playerState;
+                    if (playerState.fullscreen || playerState.webfullscreen) {
                         that._showHideTop(true);
                     }
                 });
                 that.on('dashboardhide', () => {
-                    if (that._video.global.playerState.fullscreen) {
+                    const playerState = that._video.global.playerState;
+                    if (playerState.fullscreen || playerState.webfullscreen) {
                         that._hideHideTop();
                     }
                 });
@@ -744,10 +749,14 @@
 
             proto.enterWebFullscreen = function() {
                 this._webfullscreen.enter();
+                this.global.playerState = {webfullscreen: true};
+                this._player.control.emit('webfullscreen', true);
             };
 
             proto.exitWebFullscreen = function() {
                 this._webfullscreen.exit();
+                this.global.playerState = {webfullscreen: false};
+                this._player.control.emit('webfullscreen', false);
             };
 
             proto.toggleWebFullscreen = function() {
