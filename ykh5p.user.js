@@ -263,7 +263,6 @@
 
         static hookGlobalConstructorAfter(cb = ()=>{}) {
             Hooker.hookGlobal((exports) => {
-                debugger;
                 const constructor = exports.default;
                 exports.default = function(...args) {
                     constructor.apply(this, args);
@@ -667,6 +666,33 @@
         }
     }
 
+    class ContinuePlayPatch extends Patch {
+
+        constructor() {
+            super();
+        }
+
+        _apply() {
+            Hooker.hookInitPlayerEvent((that) => { // 视频播放结束处理
+                that._player.control.on('ended', that._onEnd.bind(that));
+                that._player.control.on('ended', () => this._onEnd(that));
+            });
+        }
+
+        _onEnd(that) {
+            const config = that.global.config;
+            const playerState = that.global.playerState;
+            if (config.continuePlay && config.nextVid && !playerState.fullscreen) {
+                if (playerState.webfullscreen) {
+                    that.playByVid({vid: that.global.config.nextVid});
+                } else {
+                    that.gotoVideo(that.global.config.nextVid);
+                }
+            }
+        }
+
+    }
+
     class AntiAdPatch extends Patch {
 
         constructor() {
@@ -754,9 +780,9 @@
         _prepare() {
             this._customTip();
             this._disablePlayAfterSeek();
-            this._addPlayerEvent();
             this._addPrevInfo();
             this._playAfterPlayerReset();
+            (new ContinuePlayPatch()).install();
         }
 
         _customTip() {
@@ -781,12 +807,6 @@
                     _setCurrentTime.apply(this, [time]);
                     this.video.play = play;
                 };
-            });
-        }
-
-        _addPlayerEvent() {
-            Hooker.hookInitPlayerEvent((that) => { // 视频播放结束处理
-                that._player.control.on('ended', that._onEnd.bind(that));
             });
         }
 
