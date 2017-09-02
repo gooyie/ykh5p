@@ -395,7 +395,9 @@
         _apply() {
             Hooker.hookAdService((exports) => {
                 exports.default.prototype.requestAdData = function(arg) {
-                    this.fail(arg, {code: '404', message: 'error'});
+                    setTimeout(() => {
+                        this.fail(arg, {code: '404', message: 'error'});
+                    }, 0);
                 };
             });
         }
@@ -654,7 +656,9 @@
         }
 
         _hookPlayerCallback(exports) {
+            const _initAdEvent = exports.default.prototype._initAdEvent;
             exports.default.prototype._initAdEvent = function() {
+                _initAdEvent.apply(this);
                 this.global.cycleData.isFront = true;
             };
         }
@@ -1207,6 +1211,7 @@
 
     function blockAds() {
         (new AdBlockPatch()).install();
+        (new AntiAdPatch()).install();
         Logger.log('和谐广告');
     }
 
@@ -1251,7 +1256,5 @@
     improveQualityFallback();
     improveAutoHide();
     improveShortcuts();
-
-    (new AntiAdPatch()).install();
 
 })();
