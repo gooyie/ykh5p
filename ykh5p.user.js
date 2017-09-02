@@ -478,8 +478,10 @@
         }
 
         _patch() {
-                exports.__Dashboard.prototype.bindAutoHide = function() {
             Hooker.hookBase((exports) => {
+                const proto = exports.__Dashboard.prototype;
+
+                proto.bindAutoHide = function() {
                     this._el.addEventListener('mouseover', () => this._mouseover = true);
                     this._el.addEventListener('mouseleave', () => this._mouseover = false);
                     this.on('mouseoverpreview', () => this._mouseoverpreview = true);
@@ -503,20 +505,24 @@
                         if (!this._isPaused()) this.hide();
                     });
                 };
-                exports.__Dashboard.prototype._isPaused = function() {
+
+                proto._isPaused = function() {
                     return this._video._videoCore.video.paused;
                 };
-                exports.__Dashboard.prototype.isShow = function() {
+
+                proto.isShow = function() {
                     return this._el.style.display !== 'none';
                 };
-                const show = exports.__Dashboard.prototype.show;
-                exports.__Dashboard.prototype.show = function() {
+
+                const show = proto.show;
+                proto.show = function() {
                     this.emit('dashboardshow');
                     this._parent.style.cursor = '';
                     show.apply(this);
                 };
-                const hide = exports.__Dashboard.prototype.hide;
-                exports.__Dashboard.prototype.hide = function() {
+
+                const hide = proto.hide;
+                proto.hide = function() {
                     this.emit('dashboardhide');
                     this._parent.style.cursor = 'none'; // 隐藏鼠标
                     hide.apply(this);
@@ -667,8 +673,8 @@
         _hookPlayerCallback(exports) {
             const proto = exports.default.prototype;
 
-            const _init = exports.default.prototype._init;
-            exports.default.prototype._init = function() {
+            const _init = proto._init;
+            proto._init = function() {
                 _init.apply(this);
                 WebFullscreen.addStyle();
                 this._webfullscreen = new WebFullscreen(this.container);
