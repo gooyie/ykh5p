@@ -261,6 +261,18 @@
             this.hookModuleCall((...args) => {if (this._isGlobalModuleCall(args[1].exports)) cb(args[1].exports);});
         }
 
+        static hookGlobalConstructorAfter(cb = ()=>{}) {
+            Hooker.hookGlobal((exports) => {
+                debugger;
+                const constructor = exports.default;
+                exports.default = function(...args) {
+                    constructor.apply(this, args);
+                    cb(this);
+                };
+                exports.default.prototype = constructor.prototype;
+            });
+        }
+
         static hookGlobalInit(cb = ()=>{}) {
             Hooker.hookGlobal((exports) => {
                 const init = exports.default.prototype.init;
@@ -277,6 +289,16 @@
                 exports.default.prototype.deal = function() {
                     cb(this);
                     deal.apply(this);
+                };
+            });
+        }
+
+        static hookGlobalResetAfter(cb = ()=>{}) {
+            Hooker.hookGlobal((exports) => {
+                const reset = exports.default.prototype.reset;
+                exports.default.prototype.reset = function() {
+                    reset.apply(this);
+                    cb(this);
                 };
             });
         }
@@ -652,15 +674,8 @@
         }
 
         _apply() {
-            Hooker.hookPlayer(this._hookPlayerCallback.bind(this));
-        }
-
-        _hookPlayerCallback(exports) {
-            const _initAdEvent = exports.default.prototype._initAdEvent;
-            exports.default.prototype._initAdEvent = function() {
-                _initAdEvent.apply(this);
-                this.global.cycleData.isFront = true;
-            };
+            Hooker.hookGlobalConstructorAfter(that => that.cycleData.isFront = true);
+            Hooker.hookGlobalResetAfter(that => that.cycleData.isFront = true);
         }
 
     }
@@ -741,6 +756,7 @@
             this._disablePlayAfterSeek();
             this._addPlayerEvent();
             this._addPrevInfo();
+            this._playAfterPlayerReset();
         }
 
         _customTip() {
@@ -786,6 +802,12 @@
                         that._config.prevVid = prevVideo.encodevid;
                     }
                 }
+            });
+        }
+
+        _playAfterPlayerReset() {
+            Hooker.hookResetPlayerAfter((that) => {
+                if (that.global.playerState.state === 'playerreset') that.play();
             });
         }
 
@@ -996,7 +1018,7 @@
             case 32: // Spacebar
                 if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
                     const state = this._player.global.playerState.state;
-                    if (['paused', 'playerreset', 'player.init'].includes(state)) {
+                    if (['paused', 'player.init'].includes(state)) {
                         this._player.play();
                     } else if (state === 'ended') {
                         this._player.replay();
@@ -1148,7 +1170,7 @@
                     }
                     timer = setTimeout(() => {
                         const state = that.global.playerState.state;
-                        if (['paused', 'playerreset', 'player.init'].includes(state)) {
+                        if (['paused', 'player.init'].includes(state)) {
                             that.play();
                         } else if (state === 'ended') {
                             that.replay();
