@@ -236,29 +236,30 @@
             return code.slice(code.indexOf('{') + 1, code.lastIndexOf('}'));
         }
 
-        static _isGlobalModuleCall(exports = {}) {
+        static _isBaseModuleCall(exports = {}) {
             return exports.SingleVideoControl && exports.MultiVideoControl;
         }
 
-        static hookGlobal(cb = ()=>{}, mode) {
-            if (!this._hookGlobalCallbacks) {
-                this._hookGlobalCallbacks = [];
-                this._hookGlobalCodeCallbacks = [];
-                (mode === 'code' ? this._hookGlobalCodeCallbacks : this._hookGlobalCallbacks).push(cb);
+
+        static hookBase(cb = ()=>{}, mode) {
+            if (!this._hookBaseCallbacks) {
+                this._hookBaseCallbacks = [];
+                this._hookBaseCodeCallbacks = [];
+                (mode === 'code' ? this._hookBaseCodeCallbacks : this._hookBaseCallbacks).push(cb);
 
                 this.hookModuleCall((...args) => {
-                    if (this._isGlobalModuleCall(args[1].exports)) {
-                        if (this._hookGlobalCodeCallbacks.length > 0) {
+                    if (this._isBaseModuleCall(args[1].exports)) {
+                        if (this._hookBaseCodeCallbacks.length > 0) {
                             let code = args[3].m[args[1].i].toString();
-                            code = this._hookGlobalCodeCallbacks.reduce((c, cb) => cb(c), code);
+                            code = this._hookBaseCodeCallbacks.reduce((c, cb) => cb(c), code);
                             const fn = new Function(...this._extractArgsName(code), this._extractFunctionBody(code));
                             fn.apply(args[0], args.slice(1));
                         }
-                        this._hookGlobalCallbacks.forEach(cb => cb(args[1].exports));
+                        this._hookBaseCallbacks.forEach(cb => cb(args[1].exports));
                     }
                 });
             } else {
-                (mode === 'code' ? this._hookGlobalCodeCallbacks : this._hookGlobalCallbacks).push(cb);
+                (mode === 'code' ? this._hookBaseCodeCallbacks : this._hookBaseCallbacks).push(cb);
             }
         }
 
@@ -470,15 +471,15 @@
         }
 
         _exposeDashboard() {
-            Hooker.hookGlobal((code) => {
+            Hooker.hookBase((code) => {
                 let varName = this._findVarName(code);
                 return code.replace(/\.exports\s*=\s*(\w+)/, `$&;$1.__Dashboard=${varName};`);
             }, 'code');
         }
 
         _patch() {
-            Hooker.hookGlobal((exports) => {
                 exports.__Dashboard.prototype.bindAutoHide = function() {
+            Hooker.hookBase((exports) => {
                     this._el.addEventListener('mouseover', () => this._mouseover = true);
                     this._el.addEventListener('mouseleave', () => this._mouseover = false);
                     this.on('mouseoverpreview', () => this._mouseoverpreview = true);
@@ -648,7 +649,7 @@
                     }
                 };
             });
-            Hooker.hookGlobal((exports) => { // 单video seek 后不自动播放
+            Hooker.hookBase((exports) => {
                 const _setCurrentTime = exports.SingleVideoControl.prototype._setCurrentTime;
                 exports.SingleVideoControl.prototype._setCurrentTime = function(time) {
                     const play = this.video.play;
