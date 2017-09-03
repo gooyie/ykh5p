@@ -16,7 +16,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.9.0
+// @version      0.9.1
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -620,10 +620,10 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 if (!this._hookOzCallbacks) {
                     var self = this;
                     this._hookOzCallbacks = [cb];
-                    var _window = unsafeWindow;
-                    var oz = _window.oz; // oz 可能先于脚本执行
+                    var window = unsafeWindow;
+                    var oz = window.oz; // oz 可能先于脚本执行
 
-                    Reflect.defineProperty(_window, 'oz', {
+                    Reflect.defineProperty(window, 'oz', {
                         get: function get() {
                             return oz;
                         },
@@ -639,7 +639,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         }
                     });
 
-                    if (oz) _window.oz = oz; // oz 先于脚本执行
+                    if (oz) window.oz = oz; // oz 先于脚本执行
                 } else {
                     this._hookOzCallbacks.push(cb);
                 }
@@ -1278,7 +1278,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 };
 
                 proto.adjustVolume = function (value) {
-                    this._player && this._player.control.setVolume(this.global.playerState.volume + value);
+                    var volume = this.global.playerState.volume + value;
+                    volume = Math.max(0, Math.min(1, volume.toFixed(2)));
+                    this._player.control.setVolume(volume);
+                    if (volume === 0) {
+                        this._emitter.emit('player.showinfo', { type: 'hint', code: 'H0003', volume: volume + '%' });
+                    }
                 };
 
                 proto.toggleMute = function () {
@@ -1469,7 +1474,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         // Spacebar
                         if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
                             var state = this._player.global.playerState.state;
-                            if (['paused', 'player.init'].includes(state)) {
+                            if (state === 'paused') {
                                 this._player.play();
                             } else if (state === 'ended') {
                                 this._player.replay();
@@ -1631,7 +1636,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         }
                         timer = setTimeout(function () {
                             var state = that.global.playerState.state;
-                            if (['paused', 'player.init'].includes(state)) {
+                            if (state === 'paused') {
                                 that.play();
                             } else if (state === 'ended') {
                                 that.replay();
@@ -1697,7 +1702,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }, {
             key: '_forceH5',
             value: function _forceH5(code) {
-                return code.replace(/(if\s*\().*?(\)\s*\{)/, '$1true$2');
+                return code.replace(/(if\s*\().*?(\)\s*\{)/, '$1true$2').replace('window.sessionStorage', 'null');
             }
         }]);
 
@@ -1707,11 +1712,6 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
     function enableH5Player() {
         new H5Patch().install();
         Logger.log('启用html5播放器');
-    }
-
-    function recoverPlayer() {
-        sessionStorage.removeItem('P_l_h5');
-        Logger.log('恢复原播放器');
     }
 
     function blockAds() {
@@ -1754,9 +1754,6 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
     //=============================================================================
 
     enableH5Player();
-    window.addEventListener('unload', function () {
-        return recoverPlayer();
-    }); // 禁用脚本刷新页面可恢复播放器
     blockAds();
     invalidateWatermarks();
     invalidateQualityLimitation();
