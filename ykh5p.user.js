@@ -1038,7 +1038,7 @@
             case 32: // Spacebar
                 if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
                     const state = this._player.global.playerState.state;
-                    if (['paused', 'player.init'].includes(state)) {
+                    if (state  === 'paused') {
                         this._player.play();
                     } else if (state === 'ended') {
                         this._player.replay();
@@ -1190,7 +1190,7 @@
                     }
                     timer = setTimeout(() => {
                         const state = that.global.playerState.state;
-                        if (['paused', 'player.init'].includes(state)) {
+                        if (state  === 'paused') {
                             that.play();
                         } else if (state === 'ended') {
                             that.replay();
