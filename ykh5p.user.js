@@ -861,7 +861,12 @@
             };
 
             proto.adjustVolume = function(value) {
-                this._player && this._player.control.setVolume(this.global.playerState.volume + value);
+                let volume = this.global.playerState.volume + value;
+                volume = Math.max(0, Math.min(1, volume.toFixed(2)));
+                this._player.control.setVolume(volume);
+                if (volume === 0) {
+                    this._emitter.emit('player.showinfo', {type: 'hint', code: 'H0003', volume: volume + '%'});
+                }
             };
 
             proto.toggleMute = function() {
