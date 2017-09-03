@@ -1241,7 +1241,7 @@
         }
 
         _forceH5(code) {
-            return code.replace(/(if\s*\().*?(\)\s*\{)/, '$1true$2');
+            return code.replace(/(if\s*\().*?(\)\s*\{)/, '$1true$2').replace('window.sessionStorage', 'null');
         }
 
     }
@@ -1249,11 +1249,6 @@
     function enableH5Player() {
         (new H5Patch()).install();
         Logger.log('启用html5播放器');
-    }
-
-    function recoverPlayer() {
-        sessionStorage.removeItem('P_l_h5');
-        Logger.log('恢复原播放器');
     }
 
     function blockAds() {
@@ -1296,7 +1291,6 @@
 //=============================================================================
 
     enableH5Player();
-    window.addEventListener('unload', () => recoverPlayer()); // 禁用脚本刷新页面可恢复播放器
     blockAds();
     invalidateWatermarks();
     invalidateQualityLimitation();
