@@ -4,7 +4,7 @@
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.9.2
+// @version      0.9.3
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -815,11 +815,11 @@
                 if (that.ups && that.ups.videoData && that.ups.programList && that.ups.programList.videoList) {
                     const list = that.ups.programList.videoList;
                     const currVid = that.ups.videoData.id;
-                    const prevSeq = list.find(item => parseInt(item.vid) === currVid).seq - 1;
-                    if (prevSeq > 0) {
-                        const prevVideo = list.find(item => parseInt(item.seq) === prevSeq);
+                    const currIdx = list.findIndex(item => parseInt(item.vid) === currVid);
+                    if (currIdx > 0) {
+                        const prevVideo = list[currIdx - 1];
                         that.ups.programList.prevVideo = prevVideo;
-                        that._config.prevVid = prevVideo.encodevid;
+                        prevVideo && (that._config.prevVid = prevVideo.encodevid);
                     }
                 }
             });
