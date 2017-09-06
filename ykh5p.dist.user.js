@@ -16,7 +16,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.9.3
+// @version      0.9.4
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -1111,6 +1111,25 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return AntiAdPatch;
     }(Patch);
 
+    var FullscreenPatch = function (_Patch11) {
+        _inherits(FullscreenPatch, _Patch11);
+
+        function FullscreenPatch() {
+            _classCallCheck(this, FullscreenPatch);
+
+            return _possibleConstructorReturn(this, (FullscreenPatch.__proto__ || Object.getPrototypeOf(FullscreenPatch)).call(this));
+        }
+
+        _createClass(FullscreenPatch, [{
+            key: '_apply',
+            value: function _apply() {
+                Object.defineProperty(document, 'fullscreen', {});
+            }
+        }]);
+
+        return FullscreenPatch;
+    }(Patch);
+
     var WebFullscreen = function () {
         function WebFullscreen(elem) {
             _classCallCheck(this, WebFullscreen);
@@ -1166,8 +1185,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return WebFullscreen;
     }();
 
-    var PlayerPatch = function (_Patch11) {
-        _inherits(PlayerPatch, _Patch11);
+    var PlayerPatch = function (_Patch12) {
+        _inherits(PlayerPatch, _Patch12);
 
         function PlayerPatch() {
             _classCallCheck(this, PlayerPatch);
@@ -1189,6 +1208,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 this._addPrevInfo();
                 this._playAfterPlayerReset();
                 new ContinuePlayPatch().install();
+                new FullscreenPatch().install();
             }
         }, {
             key: '_customTip',
@@ -1426,8 +1446,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
     var playerPatch = new PlayerPatch();
 
-    var KeyShortcutsPatch = function (_Patch12) {
-        _inherits(KeyShortcutsPatch, _Patch12);
+    var KeyShortcutsPatch = function (_Patch13) {
+        _inherits(KeyShortcutsPatch, _Patch13);
 
         function KeyShortcutsPatch() {
             _classCallCheck(this, KeyShortcutsPatch);
@@ -1593,8 +1613,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return KeyShortcutsPatch;
     }(Patch);
 
-    var MouseShortcutsPatch = function (_Patch13) {
-        _inherits(MouseShortcutsPatch, _Patch13);
+    var MouseShortcutsPatch = function (_Patch14) {
+        _inherits(MouseShortcutsPatch, _Patch14);
 
         function MouseShortcutsPatch() {
             _classCallCheck(this, MouseShortcutsPatch);
@@ -1661,8 +1681,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return MouseShortcutsPatch;
     }(Patch);
 
-    var ShortcutsPatch = function (_Patch14) {
-        _inherits(ShortcutsPatch, _Patch14);
+    var ShortcutsPatch = function (_Patch15) {
+        _inherits(ShortcutsPatch, _Patch15);
 
         function ShortcutsPatch() {
             _classCallCheck(this, ShortcutsPatch);
@@ -1683,8 +1703,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return ShortcutsPatch;
     }(Patch);
 
-    var H5Patch = function (_Patch15) {
-        _inherits(H5Patch, _Patch15);
+    var H5Patch = function (_Patch16) {
+        _inherits(H5Patch, _Patch16);
 
         function H5Patch() {
             _classCallCheck(this, H5Patch);

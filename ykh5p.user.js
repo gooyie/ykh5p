@@ -4,7 +4,7 @@
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.9.3
+// @version      0.9.4
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -706,6 +706,18 @@
 
     }
 
+    class FullscreenPatch extends Patch {
+
+        constructor() {
+            super();
+        }
+
+        _apply() {
+            Object.defineProperty(document, 'fullscreen', {});
+        }
+
+    }
+
     class WebFullscreen {
 
         constructor(elem) {
@@ -783,6 +795,7 @@
             this._addPrevInfo();
             this._playAfterPlayerReset();
             (new ContinuePlayPatch()).install();
+            (new FullscreenPatch()).install();
         }
 
         _customTip() {
