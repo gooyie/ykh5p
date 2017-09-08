@@ -67,7 +67,6 @@
                 }
                 return ret;
             };
-
             this._hookCall = null;
         }
 
@@ -137,31 +136,31 @@
             this._hookModuleCall(cb, this._isLogoModuleCall);
         }
 
-        static _isSettingModuleCall(exports) {
+        static _isQualityIconComponentModuleCall(exports) {
             return this._isEsModule(exports) && this._isFuction(exports.default) &&
-                   exports.default.prototype && exports.default.prototype.hasOwnProperty('setQuality');
+                   exports.default.prototype && exports.default.prototype.hasOwnProperty('renderQuality');
         }
 
-        static hookSetting(cb) {
-            this._hookModuleCall(cb, this._isSettingModuleCall);
+        static hookQualityIcon(cb) {
+            this._hookModuleCall(cb, this._isQualityIconComponentModuleCall);
         }
 
-        static hookRenderQulaity(cb) {
-            Hooker.hookSetting((exports) => {
-                const renderQulaity = exports.default.prototype.renderQulaity;
-                exports.default.prototype.renderQulaity = function(qualitys) {
-                    cb(qualitys, this);
-                    renderQulaity.apply(this, [qualitys]);
+        static hookRenderQuality(cb) {
+            Hooker.hookQualityIcon((exports) => {
+                const renderQuality = exports.default.prototype.renderQuality;
+                exports.default.prototype.renderQuality = function(langCode) {
+                    cb(langCode, this);
+                    renderQuality.apply(this, [langCode]);
                 };
             });
         }
 
-        static hookSetCurrentQuality(cb) {
-            Hooker.hookSetting((exports) => {
-                const setCurrentQuality = exports.default.prototype.setCurrentQuality;
-                exports.default.prototype.setCurrentQuality = function() {
-                    cb(this);
-                    setCurrentQuality.apply(this);
+        static hookSetQuality(cb) {
+            Hooker.hookQualityIcon((exports) => {
+                const setQuality = exports.default.prototype.setQuality;
+                exports.default.prototype.setQuality = function(...args) { // quality, innerText
+                    cb(args, this);
+                    setQuality.apply(this, args);
                 };
             });
         }
@@ -324,6 +323,16 @@
             });
         }
 
+        static hookAdaptQualityAfter(cb) {
+            Hooker.hookGlobal((exports) => {
+                const adaptQuality = exports.default.prototype.adaptQuality;
+                exports.default.prototype.adaptQuality = function(lang) {
+                    adaptQuality.apply(this, [lang]);
+                    cb(this);
+                };
+            });
+        }
+
         static _extractArgsName(code) {
             return code.slice(code.indexOf('(') + 1, code.indexOf(')')).split(/\s*,\s*/);
         }
@@ -471,67 +480,32 @@
 
     }
 
-    class QualitySettingPatch extends Patch {
+    class QualityPatch extends Patch {
 
         constructor() {
             super();
         }
 
         _apply() {
-            this._patchPreferQuality();
-            this._patchCurrentQuality();
-            this._addStyle();
+            this._savePreferQuality();
+            this._improveAdaptQuality();
         }
 
-        _patchPreferQuality() {
-            Hooker.hookSetting((exports) => {
-                let html = exports.default.prototype.render();
-                let autoRe = /<div\s+data-val="auto"[^<>]*>自动<\/div>/;
-                let sdRe = /<div\s+data-val="320p"[^<>]*>标清<\/div>/;
-                let autoDiv = autoRe.exec(html)[0];
-                let fhdDiv = autoDiv.replace('auto', '1080p').replace('自动', '1080p');
-                html = html.replace(autoRe, fhdDiv).replace(sdRe, `$&${autoDiv}`);
-                exports.default.prototype.render = () => html;
-            });
+        _savePreferQuality() { // 选择的画质作为优先画质并保存至localStorage
+            Hooker.hookSetQuality(([quality], that) => that.data.preferQuality = quality);
         }
 
-        _patchCurrentQuality() {
-            Hooker.hookSetting((exports) => {
-                const _findRecentAvaliableQuality = exports.default.prototype._findRecentAvaliableQuality;
-                exports.default.prototype._findRecentAvaliableQuality = function(code, qualitys) {
-                    qualitys.reverse();
-                    return _findRecentAvaliableQuality.apply(this, [code, qualitys]);
-                };
-            });
-
-            Hooker.hookRenderQulaity((qualitys) => {
-                qualitys.reverse();
-                let idx = qualitys.findIndex(i => i.code === '1080p');
-                if (idx !== -1) qualitys[idx].name = '1080p';
-            });
+        _findBestQuality(qualityList) {
+            return ['1080p', '720p', '480p', '320p'].find(q => qualityList.some(v => v === q));
         }
 
-        _addStyle() {
-            GM_addStyle(`
-                .personalise-layer {
-                    width: 315px !important;
+        _improveAdaptQuality() {
+            Hooker.hookAdaptQualityAfter((that) => {
+                const cfg = that._config;
+                if (cfg.quality !== cfg.preferQuality) { // 设置的优先画质在当前视频没有
+                    cfg.defaultQuality = cfg.quality = this._findBestQuality(that.qualityList) || cfg.quality;
                 }
-                .setting-bar.setting-confirm {
-                    justify-content: center !important;
-                }
-            `);
-        }
-    }
-
-    class QualityFallbackPatch extends Patch {
-
-        constructor() {
-            super();
-        }
-
-        _apply() {
-            Hooker.hookRenderQulaity((qualitys, that) => that.data.quality = that.data.preferQuality); // 由优先画质决定当前画质
-            Hooker.hookSetCurrentQuality(that => that._video.global.config.quality = that.data.quality); // 更新config当前画质
+            });
         }
 
     }
@@ -1299,14 +1273,9 @@
         Logger.log('解除会员画质限制');
     }
 
-    function improveQualitySetting() {
-        (new QualitySettingPatch()).install();
-        Logger.log('设置里优先画质增加1080P选项并与当前画质对齐');
-    }
-
-    function improveQualityFallback() {
-        (new QualityFallbackPatch()).install();
-        Logger.log('改善当前画质逻辑');
+    function improveQualityLogic() {
+        (new QualityPatch()).install();
+        Logger.log('改善画质逻辑');
     }
 
     function improveAutoHide() {
@@ -1326,8 +1295,7 @@
     blockAds();
     invalidateWatermarks();
     invalidateQualityLimitation();
-    improveQualitySetting();
-    improveQualityFallback();
+    improveQualityLogic();
     improveAutoHide();
     improveShortcuts();
 
