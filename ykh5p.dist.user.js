@@ -1,5 +1,7 @@
 'use strict';
 
+var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
@@ -16,7 +18,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.9.4
+// @version      0.10.0
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -110,10 +112,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }
 
         _createClass(Hooker, null, [{
-            key: 'hookCall',
-            value: function hookCall() {
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-
+            key: '_hookCall',
+            value: function _hookCall(cb) {
                 var call = Function.prototype.call;
                 Function.prototype.call = function () {
                     for (var _len6 = arguments.length, args = Array(_len6), _key6 = 0; _key6 < _len6; _key6++) {
@@ -122,21 +122,22 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
                     var ret = call.apply(this, args);
                     try {
-                        if (args) cb.apply(undefined, args);
+                        if (args && cb(args)) {
+                            Function.prototype.call = call;
+                            cb = function cb() {};
+                            Logger.log('restored call');
+                        }
                     } catch (err) {
                         Logger.error(err.stack);
                     }
                     return ret;
                 };
-
-                Function.prototype.call.toString = Function.prototype.call.toLocaleString = function () {
-                    return 'function call() { [native code] }';
-                };
+                this._hookCall = null;
             }
         }, {
             key: '_isEsModule',
             value: function _isEsModule(obj) {
-                return obj && obj.__esModule;
+                return obj.__esModule;
             }
         }, {
             key: '_isFuction',
@@ -147,50 +148,74 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             key: '_isModuleCall',
             value: function _isModuleCall(args) {
                 // module.exports, module, module.exports, require
-                return args.length === 4 && args[1] instanceof Object && args[1].hasOwnProperty('exports');
+                return args.length === 4 && args[1] && Object.getPrototypeOf(args[1]) === Object.prototype && args[1].hasOwnProperty('exports');
             }
         }, {
-            key: 'hookModuleCall',
-            value: function hookModuleCall() {
+            key: '_hookModuleCall',
+            value: function _hookModuleCall(cb, pred) {
                 var _this = this;
 
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+                var callbacksMap = new Map([[pred, [cb]]]);
+                this._hookCall(function (args) {
+                    if (!_this._isModuleCall(args)) return;
+                    var exports = args[1].exports;
+                    var _iteratorNormalCompletion = true;
+                    var _didIteratorError = false;
+                    var _iteratorError = undefined;
 
-                this.hookCall(function () {
-                    for (var _len7 = arguments.length, args = Array(_len7), _key7 = 0; _key7 < _len7; _key7++) {
-                        args[_key7] = arguments[_key7];
+                    try {
+                        for (var _iterator = callbacksMap[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                            var _step$value = _slicedToArray(_step.value, 2),
+                                _pred = _step$value[0],
+                                callbacks = _step$value[1];
+
+                            if (!_pred.apply(_this, [exports])) continue;
+                            callbacks.forEach(function (cb) {
+                                return cb(exports, args);
+                            });
+                            callbacksMap.delete(_pred);
+                            !callbacksMap.size && (_this._hookModuleCall = null);
+                            break;
+                        }
+                    } catch (err) {
+                        _didIteratorError = true;
+                        _iteratorError = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion && _iterator.return) {
+                                _iterator.return();
+                            }
+                        } finally {
+                            if (_didIteratorError) {
+                                throw _iteratorError;
+                            }
+                        }
                     }
 
-                    if (_this._isModuleCall(args)) cb.apply(undefined, args);
+                    return !callbacksMap.size;
                 });
+
+                this._hookModuleCall = function (cb, pred) {
+                    if (callbacksMap.has(pred)) {
+                        callbacksMap.get(pred).push(cb);
+                    } else {
+                        callbacksMap.set(pred, [cb]);
+                    }
+                };
             }
         }, {
             key: '_isUpsModuleCall',
-            value: function _isUpsModuleCall() {
-                var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-
+            value: function _isUpsModuleCall(exports) {
                 return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('getServieceUrl') && /\.id\s*=\s*"ups"/.test(exports.default.toString());
             }
         }, {
             key: 'hookUps',
-            value: function hookUps() {
-                var _this2 = this;
-
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-
-                this.hookModuleCall(function () {
-                    for (var _len8 = arguments.length, args = Array(_len8), _key8 = 0; _key8 < _len8; _key8++) {
-                        args[_key8] = arguments[_key8];
-                    }
-
-                    if (_this2._isUpsModuleCall(args[1].exports)) cb(args[1].exports);
-                });
+            value: function hookUps(cb) {
+                this._hookModuleCall(cb, this._isUpsModuleCall);
             }
         }, {
             key: 'hookUpsOnComplete',
-            value: function hookUpsOnComplete() {
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-
+            value: function hookUpsOnComplete(cb) {
                 this.hookUps(function (exports) {
                     var onComplete = exports.default.prototype.onComplete;
                     exports.default.prototype.onComplete = function (res) {
@@ -201,101 +226,64 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             }
         }, {
             key: '_isLogoModuleCall',
-            value: function _isLogoModuleCall() {
-                var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-
+            value: function _isLogoModuleCall(exports) {
                 return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('reset') && /logo\.style\.display/.test(exports.default.prototype.reset.toString());
             }
         }, {
             key: 'hookLogo',
-            value: function hookLogo() {
-                var _this3 = this;
-
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-
-                this.hookModuleCall(function () {
-                    for (var _len9 = arguments.length, args = Array(_len9), _key9 = 0; _key9 < _len9; _key9++) {
-                        args[_key9] = arguments[_key9];
-                    }
-
-                    if (_this3._isLogoModuleCall(args[1].exports)) cb(args[1].exports);
-                });
+            value: function hookLogo(cb) {
+                this._hookModuleCall(cb, this._isLogoModuleCall);
             }
         }, {
-            key: '_isSettingModuleCall',
-            value: function _isSettingModuleCall() {
-                var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-
-                return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('setQuality');
+            key: '_isQualityIconComponentModuleCall',
+            value: function _isQualityIconComponentModuleCall(exports) {
+                return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('renderQuality');
             }
         }, {
-            key: 'hookSetting',
-            value: function hookSetting() {
-                var _this4 = this;
-
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-
-                this.hookModuleCall(function () {
-                    for (var _len10 = arguments.length, args = Array(_len10), _key10 = 0; _key10 < _len10; _key10++) {
-                        args[_key10] = arguments[_key10];
-                    }
-
-                    if (_this4._isSettingModuleCall(args[1].exports)) cb(args[1].exports);
-                });
+            key: 'hookQualityIcon',
+            value: function hookQualityIcon(cb) {
+                this._hookModuleCall(cb, this._isQualityIconComponentModuleCall);
             }
         }, {
-            key: 'hookRenderQulaity',
-            value: function hookRenderQulaity() {
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-
-                Hooker.hookSetting(function (exports) {
-                    var renderQulaity = exports.default.prototype.renderQulaity;
-                    exports.default.prototype.renderQulaity = function (qualitys) {
-                        cb(qualitys, this);
-                        renderQulaity.apply(this, [qualitys]);
+            key: 'hookRenderQuality',
+            value: function hookRenderQuality(cb) {
+                Hooker.hookQualityIcon(function (exports) {
+                    var renderQuality = exports.default.prototype.renderQuality;
+                    exports.default.prototype.renderQuality = function (langCode) {
+                        cb(langCode, this);
+                        renderQuality.apply(this, [langCode]);
                     };
                 });
             }
         }, {
-            key: 'hookSetCurrentQuality',
-            value: function hookSetCurrentQuality() {
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
+            key: 'hookSetQuality',
+            value: function hookSetQuality(cb) {
+                Hooker.hookQualityIcon(function (exports) {
+                    var setQuality = exports.default.prototype.setQuality;
+                    exports.default.prototype.setQuality = function () {
+                        for (var _len7 = arguments.length, args = Array(_len7), _key7 = 0; _key7 < _len7; _key7++) {
+                            args[_key7] = arguments[_key7];
+                        }
 
-                Hooker.hookSetting(function (exports) {
-                    var setCurrentQuality = exports.default.prototype.setCurrentQuality;
-                    exports.default.prototype.setCurrentQuality = function () {
-                        cb(this);
-                        setCurrentQuality.apply(this);
+                        // quality, innerText
+                        cb(args, this);
+                        setQuality.apply(this, args);
                     };
                 });
             }
         }, {
             key: '_isPlayerModuleCall',
-            value: function _isPlayerModuleCall() {
-                var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-
+            value: function _isPlayerModuleCall(exports) {
                 return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('_resetPlayer');
             }
         }, {
             key: 'hookPlayer',
-            value: function hookPlayer() {
-                var _this5 = this;
-
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-
-                this.hookModuleCall(function () {
-                    for (var _len11 = arguments.length, args = Array(_len11), _key11 = 0; _key11 < _len11; _key11++) {
-                        args[_key11] = arguments[_key11];
-                    }
-
-                    if (_this5._isPlayerModuleCall(args[1].exports)) cb(args[1].exports);
-                });
+            value: function hookPlayer(cb) {
+                this._hookModuleCall(cb, this._isPlayerModuleCall);
             }
         }, {
             key: 'hookInitPlayerEvent',
-            value: function hookInitPlayerEvent() {
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-
+            value: function hookInitPlayerEvent(cb) {
                 Hooker.hookPlayer(function (exports) {
                     var _initPlayerEvent = exports.default.prototype._initPlayerEvent;
                     exports.default.prototype._initPlayerEvent = function () {
@@ -306,9 +294,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             }
         }, {
             key: 'hookResetPlayerAfter',
-            value: function hookResetPlayerAfter() {
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-
+            value: function hookResetPlayerAfter(cb) {
                 Hooker.hookPlayer(function (exports) {
                     var _resetPlayer = exports.default.prototype._resetPlayer;
                     exports.default.prototype._resetPlayer = function () {
@@ -324,97 +310,47 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             }
         }, {
             key: '_isKeyShortcutsModuleCall',
-            value: function _isKeyShortcutsModuleCall() {
-                var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-
+            value: function _isKeyShortcutsModuleCall(exports) {
                 return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('registerEvents');
             }
         }, {
             key: 'hookKeyShortcuts',
-            value: function hookKeyShortcuts() {
-                var _this6 = this;
-
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-
-                this.hookModuleCall(function () {
-                    for (var _len12 = arguments.length, args = Array(_len12), _key12 = 0; _key12 < _len12; _key12++) {
-                        args[_key12] = arguments[_key12];
-                    }
-
-                    if (_this6._isKeyShortcutsModuleCall(args[1].exports)) cb(args[1].exports);
-                });
+            value: function hookKeyShortcuts(cb) {
+                this._hookModuleCall(cb, this._isKeyShortcutsModuleCall);
             }
         }, {
             key: '_isTipsModuleCall',
-            value: function _isTipsModuleCall() {
-                var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-
+            value: function _isTipsModuleCall(exports) {
                 return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('showHintTips');
             }
         }, {
             key: 'hookTips',
-            value: function hookTips() {
-                var _this7 = this;
-
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-
-                this.hookModuleCall(function () {
-                    for (var _len13 = arguments.length, args = Array(_len13), _key13 = 0; _key13 < _len13; _key13++) {
-                        args[_key13] = arguments[_key13];
-                    }
-
-                    if (_this7._isTipsModuleCall(args[1].exports)) cb(args[1].exports);
-                });
+            value: function hookTips(cb) {
+                this._hookModuleCall(cb, this._isTipsModuleCall);
             }
         }, {
             key: '_isAdServiceModuleCall',
-            value: function _isAdServiceModuleCall() {
-                var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-
+            value: function _isAdServiceModuleCall(exports) {
                 return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('requestAdData');
             }
         }, {
             key: 'hookAdService',
-            value: function hookAdService() {
-                var _this8 = this;
-
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-
-                this.hookModuleCall(function () {
-                    for (var _len14 = arguments.length, args = Array(_len14), _key14 = 0; _key14 < _len14; _key14++) {
-                        args[_key14] = arguments[_key14];
-                    }
-
-                    if (_this8._isAdServiceModuleCall(args[1].exports)) cb(args[1].exports);
-                });
+            value: function hookAdService(cb) {
+                this._hookModuleCall(cb, this._isAdServiceModuleCall);
             }
         }, {
             key: '_isTopAreaModuleCall',
-            value: function _isTopAreaModuleCall() {
-                var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-
+            value: function _isTopAreaModuleCall(exports) {
                 return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('_timerHandler');
             }
         }, {
             key: 'hookTopArea',
-            value: function hookTopArea() {
-                var _this9 = this;
-
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-
-                this.hookModuleCall(function () {
-                    for (var _len15 = arguments.length, args = Array(_len15), _key15 = 0; _key15 < _len15; _key15++) {
-                        args[_key15] = arguments[_key15];
-                    }
-
-                    if (_this9._isTopAreaModuleCall(args[1].exports)) cb(args[1].exports);
-                });
+            value: function hookTopArea(cb) {
+                this._hookModuleCall(cb, this._isTopAreaModuleCall);
             }
         }, {
             key: 'hookTopAreaAddEvent',
-            value: function hookTopAreaAddEvent() {
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-
+            value: function hookTopAreaAddEvent(cb) {
                 Hooker.hookTopArea(function (exports) {
                     var _addEvent = exports.default.prototype._addEvent;
                     exports.default.prototype._addEvent = function () {
@@ -425,31 +361,17 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             }
         }, {
             key: '_isPreviewLayerModuleCall',
-            value: function _isPreviewLayerModuleCall() {
-                var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-
+            value: function _isPreviewLayerModuleCall(exports) {
                 return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('setPreviewShow');
             }
         }, {
             key: 'hookPreviewLayer',
-            value: function hookPreviewLayer() {
-                var _this10 = this;
-
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-
-                this.hookModuleCall(function () {
-                    for (var _len16 = arguments.length, args = Array(_len16), _key16 = 0; _key16 < _len16; _key16++) {
-                        args[_key16] = arguments[_key16];
-                    }
-
-                    if (_this10._isPreviewLayerModuleCall(args[1].exports)) cb(args[1].exports);
-                });
+            value: function hookPreviewLayer(cb) {
+                this._hookModuleCall(cb, this._isPreviewLayerModuleCall);
             }
         }, {
             key: 'hookPreviewLayerBind',
-            value: function hookPreviewLayerBind() {
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-
+            value: function hookPreviewLayerBind(cb) {
                 Hooker.hookPreviewLayer(function (exports) {
                     var bind = exports.default.prototype.bind;
                     exports.default.prototype.bind = function () {
@@ -460,58 +382,32 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             }
         }, {
             key: '_isSettingSeriesComponentModuleCall',
-            value: function _isSettingSeriesComponentModuleCall() {
-                var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-
+            value: function _isSettingSeriesComponentModuleCall(exports) {
                 return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('_addEvent') && exports.default.prototype._addEvent.toString().includes('seriesliseLayer');
             }
         }, {
             key: 'hookSettingSeries',
-            value: function hookSettingSeries() {
-                var _this11 = this;
-
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-
-                this.hookModuleCall(function () {
-                    for (var _len17 = arguments.length, args = Array(_len17), _key17 = 0; _key17 < _len17; _key17++) {
-                        args[_key17] = arguments[_key17];
-                    }
-
-                    if (_this11._isSettingSeriesComponentModuleCall(args[1].exports)) cb(args[1].exports);
-                });
+            value: function hookSettingSeries(cb) {
+                this._hookModuleCall(cb, this._isSettingSeriesComponentModuleCall);
             }
         }, {
             key: '_isGlobalModuleCall',
-            value: function _isGlobalModuleCall() {
-                var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-
+            value: function _isGlobalModuleCall(exports) {
                 return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('resetConfig');
             }
         }, {
             key: 'hookGlobal',
-            value: function hookGlobal() {
-                var _this12 = this;
-
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-
-                this.hookModuleCall(function () {
-                    for (var _len18 = arguments.length, args = Array(_len18), _key18 = 0; _key18 < _len18; _key18++) {
-                        args[_key18] = arguments[_key18];
-                    }
-
-                    if (_this12._isGlobalModuleCall(args[1].exports)) cb(args[1].exports);
-                });
+            value: function hookGlobal(cb) {
+                this._hookModuleCall(cb, this._isGlobalModuleCall);
             }
         }, {
             key: 'hookGlobalConstructorAfter',
-            value: function hookGlobalConstructorAfter() {
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-
+            value: function hookGlobalConstructorAfter(cb) {
                 Hooker.hookGlobal(function (exports) {
                     var constructor = exports.default;
                     exports.default = function () {
-                        for (var _len19 = arguments.length, args = Array(_len19), _key19 = 0; _key19 < _len19; _key19++) {
-                            args[_key19] = arguments[_key19];
+                        for (var _len8 = arguments.length, args = Array(_len8), _key8 = 0; _key8 < _len8; _key8++) {
+                            args[_key8] = arguments[_key8];
                         }
 
                         constructor.apply(this, args);
@@ -522,9 +418,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             }
         }, {
             key: 'hookGlobalInit',
-            value: function hookGlobalInit() {
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-
+            value: function hookGlobalInit(cb) {
                 Hooker.hookGlobal(function (exports) {
                     var init = exports.default.prototype.init;
                     exports.default.prototype.init = function (config) {
@@ -535,9 +429,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             }
         }, {
             key: 'hookGlobalDeal',
-            value: function hookGlobalDeal() {
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-
+            value: function hookGlobalDeal(cb) {
                 Hooker.hookGlobal(function (exports) {
                     var deal = exports.default.prototype.deal;
                     exports.default.prototype.deal = function () {
@@ -548,13 +440,22 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             }
         }, {
             key: 'hookGlobalResetAfter',
-            value: function hookGlobalResetAfter() {
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-
+            value: function hookGlobalResetAfter(cb) {
                 Hooker.hookGlobal(function (exports) {
                     var reset = exports.default.prototype.reset;
                     exports.default.prototype.reset = function () {
                         reset.apply(this);
+                        cb(this);
+                    };
+                });
+            }
+        }, {
+            key: 'hookAdaptQualityAfter',
+            value: function hookAdaptQualityAfter(cb) {
+                Hooker.hookGlobal(function (exports) {
+                    var adaptQuality = exports.default.prototype.adaptQuality;
+                    exports.default.prototype.adaptQuality = function (lang) {
+                        adaptQuality.apply(this, [lang]);
                         cb(this);
                     };
                 });
@@ -571,109 +472,92 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             }
         }, {
             key: '_isBaseModuleCall',
-            value: function _isBaseModuleCall() {
-                var exports = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-
+            value: function _isBaseModuleCall(exports) {
                 return exports.SingleVideoControl && exports.MultiVideoControl;
             }
         }, {
             key: 'hookBase',
-            value: function hookBase() {
-                var _this13 = this;
+            value: function hookBase(cb, mode) {
+                var _this2 = this;
 
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-                var mode = arguments[1];
+                var callbacks = [];
+                var codeCallbacks = [];
+                (mode === 'code' ? codeCallbacks : callbacks).push(cb);
 
-                if (!this._hookBaseCallbacks) {
-                    this._hookBaseCallbacks = [];
-                    this._hookBaseCodeCallbacks = [];
-                    (mode === 'code' ? this._hookBaseCodeCallbacks : this._hookBaseCallbacks).push(cb);
-
-                    this.hookModuleCall(function () {
-                        for (var _len20 = arguments.length, args = Array(_len20), _key20 = 0; _key20 < _len20; _key20++) {
-                            args[_key20] = arguments[_key20];
-                        }
-
-                        if (_this13._isBaseModuleCall(args[1].exports)) {
-                            if (_this13._hookBaseCodeCallbacks.length > 0) {
-                                var code = args[3].m[args[1].i].toString();
-                                code = _this13._hookBaseCodeCallbacks.reduce(function (c, cb) {
-                                    return cb(c);
-                                }, code);
-                                var fn = new (Function.prototype.bind.apply(Function, [null].concat(_toConsumableArray(_this13._extractArgsName(code)), [_this13._extractFunctionBody(code)])))();
-                                fn.apply(args[0], args.slice(1));
-                            }
-                            _this13._hookBaseCallbacks.forEach(function (cb) {
-                                return cb(args[1].exports);
-                            });
-                        }
+                this._hookModuleCall(function (exports, args) {
+                    if (codeCallbacks.length > 0) {
+                        var code = args[3].m[args[1].i].toString();
+                        code = codeCallbacks.reduce(function (c, cb) {
+                            return cb(c);
+                        }, code);
+                        var fn = new (Function.prototype.bind.apply(Function, [null].concat(_toConsumableArray(_this2._extractArgsName(code)), [_this2._extractFunctionBody(code)])))();
+                        fn.apply(args[0], args.slice(1));
+                    }
+                    callbacks.forEach(function (cb) {
+                        return cb(args[1].exports);
                     });
-                } else {
-                    (mode === 'code' ? this._hookBaseCodeCallbacks : this._hookBaseCallbacks).push(cb);
-                }
+                    _this2.hookBase = null;
+                }, this._isBaseModuleCall);
+
+                this.hookBase = function (cb, mode) {
+                    return (mode === 'code' ? codeCallbacks : callbacks).push(cb);
+                };
             }
         }, {
             key: 'hookOz',
-            value: function hookOz() {
-                var cb = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : function () {};
-
-                if (!this._hookOzCallbacks) {
-                    var self = this;
-                    this._hookOzCallbacks = [cb];
-                    var window = unsafeWindow;
-                    var oz = window.oz; // oz 可能先于脚本执行
-
-                    Object.defineProperty(window, 'oz', {
-                        get: function get() {
-                            return oz;
-                        },
-                        set: function set(value) {
-                            oz = value;
-                            try {
-                                self._hookOzCallbacks.forEach(function (cb) {
-                                    return cb(oz);
-                                });
-                            } catch (err) {
-                                Logger.error(err.stack);
-                            }
+            value: function hookOz(cb) {
+                var callbacks = [cb];
+                var window = unsafeWindow;
+                var oz = window.oz; // oz 可能先于脚本执行
+                Object.defineProperty(window, 'oz', {
+                    get: function get() {
+                        return oz;
+                    },
+                    set: function set(value) {
+                        oz = value;
+                        try {
+                            callbacks.forEach(function (cb) {
+                                return cb(oz);
+                            });
+                        } catch (err) {
+                            Logger.error(err.stack);
                         }
-                    });
+                    }
+                });
+                if (oz) window.oz = oz; // oz 先于脚本执行
 
-                    if (oz) window.oz = oz; // oz 先于脚本执行
-                } else {
-                    this._hookOzCallbacks.push(cb);
-                }
+                this.hookOz = function (cb) {
+                    return callbacks.push(cb);
+                };
             }
         }, {
             key: 'hookDefine',
-            value: function hookDefine(name) {
-                var _this14 = this;
+            value: function hookDefine(name, cb) {
+                var _this3 = this;
 
-                var cb = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
+                var callbacksMap = new Map([[name, [cb]]]);
+                this.hookOz(function (oz) {
+                    var self = _this3;
+                    var define = oz.define;
+                    oz.define = function (name, deps, block) {
+                        if (callbacksMap.has(name)) {
+                            var code = block.toString();
+                            code = callbacksMap.get(name).reduce(function (c, cb) {
+                                return cb(c);
+                            }, code);
+                            block = new (Function.prototype.bind.apply(Function, [null].concat(_toConsumableArray(self._extractArgsName(code)), [self._extractFunctionBody(code)])))();
+                        }
+                        define(name, deps, block);
+                    };
+                });
 
-                if (!this._hookDefineCallbacksMap) {
-                    this._hookDefineCallbacksMap = new Map([[name, [cb]]]);
-                    this.hookOz(function (oz) {
-                        var self = _this14;
-                        var define = oz.define;
-                        oz.define = function (name, deps, block) {
-                            if (self._hookDefineCallbacksMap.has(name)) {
-                                var code = block.toString();
-                                code = self._hookDefineCallbacksMap.get(name).reduce(function (c, cb) {
-                                    return cb(c);
-                                }, code);
-                                block = new (Function.prototype.bind.apply(Function, [null].concat(_toConsumableArray(self._extractArgsName(code)), [self._extractFunctionBody(code)])))();
-                            }
-                            define(name, deps, block);
-                        };
-                    });
-                } else {
-                    if (this._hookDefineCallbacksMap.has(name)) {
-                        this._hookDefineCallbacksMap.get(name).push(cb);
+                this.hookDefine = function (name, cb) {
+                    if (callbacksMap.has(name)) {
+                        callbacksMap.get(name).push(cb);
                     } else {
-                        this._hookDefineCallbacksMap.set(name, [cb]);
+                        callbacksMap.set(name, [cb]);
                     }
-                }
+                };
             }
         }]);
 
@@ -717,10 +601,10 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             value: function _apply() {
                 Hooker.hookAdService(function (exports) {
                     exports.default.prototype.requestAdData = function (arg) {
-                        var _this16 = this;
+                        var _this5 = this;
 
                         setTimeout(function () {
-                            _this16.fail(arg, { code: '404', message: 'error' });
+                            _this5.fail(arg, { code: '404', message: 'error' });
                         }, 0);
                     };
                 });
@@ -777,88 +661,85 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return VipPatch;
     }(Patch);
 
-    var QualitySettingPatch = function (_Patch4) {
-        _inherits(QualitySettingPatch, _Patch4);
+    var QualityPatch = function (_Patch4) {
+        _inherits(QualityPatch, _Patch4);
 
-        function QualitySettingPatch() {
-            _classCallCheck(this, QualitySettingPatch);
+        function QualityPatch() {
+            _classCallCheck(this, QualityPatch);
 
-            return _possibleConstructorReturn(this, (QualitySettingPatch.__proto__ || Object.getPrototypeOf(QualitySettingPatch)).call(this));
+            return _possibleConstructorReturn(this, (QualityPatch.__proto__ || Object.getPrototypeOf(QualityPatch)).call(this));
         }
 
-        _createClass(QualitySettingPatch, [{
+        _createClass(QualityPatch, [{
             key: '_apply',
             value: function _apply() {
-                this._patchPreferQuality();
-                this._patchCurrentQuality();
-                this._addStyle();
+                this._savePreferQuality();
+                this._improveAdaptQuality();
             }
         }, {
-            key: '_patchPreferQuality',
-            value: function _patchPreferQuality() {
-                Hooker.hookSetting(function (exports) {
-                    var html = exports.default.prototype.render();
-                    var autoRe = /<div\s+data-val="auto"[^<>]*>自动<\/div>/;
-                    var sdRe = /<div\s+data-val="320p"[^<>]*>标清<\/div>/;
-                    var autoDiv = autoRe.exec(html)[0];
-                    var fhdDiv = autoDiv.replace('auto', '1080p').replace('自动', '1080p');
-                    html = html.replace(autoRe, fhdDiv).replace(sdRe, '$&' + autoDiv);
-                    exports.default.prototype.render = function () {
-                        return html;
-                    };
-                });
-            }
-        }, {
-            key: '_patchCurrentQuality',
-            value: function _patchCurrentQuality() {
-                Hooker.hookSetting(function (exports) {
-                    var _findRecentAvaliableQuality = exports.default.prototype._findRecentAvaliableQuality;
-                    exports.default.prototype._findRecentAvaliableQuality = function (code, qualitys) {
-                        qualitys.reverse();
-                        return _findRecentAvaliableQuality.apply(this, [code, qualitys]);
-                    };
-                });
+            key: '_savePreferQuality',
+            value: function _savePreferQuality() {
+                // 选择的画质作为优先画质并保存至localStorage
+                Hooker.hookSetQuality(function (_ref, that) {
+                    var _ref2 = _slicedToArray(_ref, 1),
+                        quality = _ref2[0];
 
-                Hooker.hookRenderQulaity(function (qualitys) {
-                    qualitys.reverse();
-                    var idx = qualitys.findIndex(function (i) {
-                        return i.code === '1080p';
-                    });
-                    if (idx !== -1) qualitys[idx].name = '1080p';
+                    return that.data.preferQuality = quality;
                 });
             }
         }, {
-            key: '_addStyle',
-            value: function _addStyle() {
-                GM_addStyle('\n                .personalise-layer {\n                    width: 315px !important;\n                }\n                .setting-bar.setting-confirm {\n                    justify-content: center !important;\n                }\n            ');
+            key: '_findBestQuality',
+            value: function _findBestQuality(qualityList) {
+                return ['1080p', '720p', '480p', '320p'].find(function (q) {
+                    return qualityList.some(function (v) {
+                        return v === q;
+                    });
+                });
+            }
+        }, {
+            key: '_improveAdaptQuality',
+            value: function _improveAdaptQuality() {
+                var _this9 = this;
+
+                Hooker.hookAdaptQualityAfter(function (that) {
+                    var cfg = that._config;
+                    if (cfg.quality !== cfg.preferQuality) {
+                        // 设置的优先画质在当前视频没有
+                        cfg.defaultQuality = cfg.quality = _this9._findBestQuality(that.qualityList) || cfg.quality;
+                    }
+                });
             }
         }]);
 
-        return QualitySettingPatch;
+        return QualityPatch;
     }(Patch);
 
-    var QualityFallbackPatch = function (_Patch5) {
-        _inherits(QualityFallbackPatch, _Patch5);
+    var SkipLocalPlayRecordPatch = function (_Patch5) {
+        _inherits(SkipLocalPlayRecordPatch, _Patch5);
 
-        function QualityFallbackPatch() {
-            _classCallCheck(this, QualityFallbackPatch);
+        function SkipLocalPlayRecordPatch() {
+            _classCallCheck(this, SkipLocalPlayRecordPatch);
 
-            return _possibleConstructorReturn(this, (QualityFallbackPatch.__proto__ || Object.getPrototypeOf(QualityFallbackPatch)).call(this));
+            return _possibleConstructorReturn(this, (SkipLocalPlayRecordPatch.__proto__ || Object.getPrototypeOf(SkipLocalPlayRecordPatch)).call(this));
         }
 
-        _createClass(QualityFallbackPatch, [{
+        _createClass(SkipLocalPlayRecordPatch, [{
             key: '_apply',
             value: function _apply() {
-                Hooker.hookRenderQulaity(function (qualitys, that) {
-                    return that.data.quality = that.data.preferQuality;
-                }); // 由优先画质决定当前画质
-                Hooker.hookSetCurrentQuality(function (that) {
-                    return that._video.global.config.quality = that.data.quality;
-                }); // 更新config当前画质
+                Hooker.hookPlayer(function (exports) {
+                    var skipLocalPlayRecord = exports.default.prototype.skipLocalPlayRecord;
+                    exports.default.prototype.skipLocalPlayRecord = function () {
+                        var cfg = this.global.config;
+                        var headPosition = cfg.headPosition;
+                        cfg.headPosition = cfg.playRecord;
+                        skipLocalPlayRecord.apply(this);
+                        cfg.headPosition = headPosition;
+                    };
+                });
             }
         }]);
 
-        return QualityFallbackPatch;
+        return SkipLocalPlayRecordPatch;
     }(Patch);
 
     var DashboardPatch = function (_Patch6) {
@@ -898,10 +779,10 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }, {
             key: '_exposeDashboard',
             value: function _exposeDashboard() {
-                var _this22 = this;
+                var _this12 = this;
 
                 Hooker.hookBase(function (code) {
-                    var varName = _this22._findVarName(code);
+                    var varName = _this12._findVarName(code);
                     return code.replace(/\.exports\s*=\s*(\w+)/, '$&;$1.__Dashboard=' + varName + ';');
                 }, 'code');
             }
@@ -912,35 +793,35 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     var proto = exports.__Dashboard.prototype;
 
                     proto.bindAutoHide = function () {
-                        var _this23 = this;
+                        var _this13 = this;
 
                         this._el.addEventListener('mouseover', function () {
-                            return _this23._mouseover = true;
+                            return _this13._mouseover = true;
                         });
                         this._el.addEventListener('mouseleave', function () {
-                            return _this23._mouseover = false;
+                            return _this13._mouseover = false;
                         });
                         this.on('mouseoverpreview', function () {
-                            return _this23._mouseoverpreview = true;
+                            return _this13._mouseoverpreview = true;
                         });
                         this.on('mouseleavepreview', function () {
-                            return _this23._mouseoverpreview = false;
+                            return _this13._mouseoverpreview = false;
                         });
                         this._video.on('play', function () {
-                            if (!_this23._mouseover && !_this23._mouseoverpreview) _this23._hideTimeout = setTimeout(_this23.hide.bind(_this23), _this23._args.autoHide);
+                            if (!_this13._mouseover && !_this13._mouseoverpreview) _this13._hideTimeout = setTimeout(_this13.hide.bind(_this13), _this13._args.autoHide);
                         });
                         this._video.on('pause', function () {
-                            _this23._hideTimeout && clearTimeout(_this23._hideTimeout);
-                            _this23.isShow() || _this23.show();
+                            _this13._hideTimeout && clearTimeout(_this13._hideTimeout);
+                            _this13.isShow() || _this13.show();
                         });
                         this._parent.addEventListener('mousemove', function () {
-                            _this23._hideTimeout && clearTimeout(_this23._hideTimeout);
-                            _this23.isShow() || _this23.show();
-                            if (!_this23._isPaused() && !_this23._mouseover && !_this23._mouseoverpreview) _this23._hideTimeout = setTimeout(_this23.hide.bind(_this23), _this23._args.autoHide);
+                            _this13._hideTimeout && clearTimeout(_this13._hideTimeout);
+                            _this13.isShow() || _this13.show();
+                            if (!_this13._isPaused() && !_this13._mouseover && !_this13._mouseoverpreview) _this13._hideTimeout = setTimeout(_this13.hide.bind(_this13), _this13._args.autoHide);
                         });
                         this._parent.addEventListener('mouseleave', function () {
-                            _this23._hideTimeout && clearTimeout(_this23._hideTimeout);
-                            if (!_this23._isPaused()) _this23.hide();
+                            _this13._hideTimeout && clearTimeout(_this13._hideTimeout);
+                            if (!_this13._isPaused()) _this13.hide();
                         });
                     };
 
@@ -1027,16 +908,16 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     // 网页全屏显示选集
                     var _addEvent = exports.default.prototype._addEvent;
                     exports.default.prototype._addEvent = function () {
-                        var _this26 = this;
+                        var _this16 = this;
 
                         _addEvent.apply(this);
                         this.on('webfullscreen', function (isWebFullscreen) {
                             if (isWebFullscreen) {
-                                if (_this26.seriesList.length > 1) _this26._el.style.display = 'inline-block';
+                                if (_this16.seriesList.length > 1) _this16._el.style.display = 'inline-block';
                             } else {
-                                _this26._el.style.display = 'none';
-                                _this26._el.classList.remove('cliced');
-                                _this26.emit('seriesliseLayer', false);
+                                _this16._el.style.display = 'none';
+                                _this16._el.classList.remove('cliced');
+                                _this16.emit('seriesliseLayer', false);
                             }
                         });
                     };
@@ -1059,13 +940,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         _createClass(ContinuePlayPatch, [{
             key: '_apply',
             value: function _apply() {
-                var _this28 = this;
+                var _this18 = this;
 
                 Hooker.hookInitPlayerEvent(function (that) {
                     // 视频播放结束处理
                     that._player.control.on('ended', that._onEnd.bind(that));
                     that._player.control.on('ended', function () {
-                        return _this28._onEnd(that);
+                        return _this18._onEnd(that);
                     });
                 });
             }
@@ -1208,6 +1089,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 this._addPrevInfo();
                 this._playAfterPlayerReset();
                 new ContinuePlayPatch().install();
+                new SkipLocalPlayRecordPatch().install();
                 new FullscreenPatch().install();
             }
         }, {
@@ -1421,7 +1303,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
                 var playNext = proto.playNext;
                 proto.playNext = function (data) {
-                    if (data) playNext.apply(this, [data]);
+                    if (data) return playNext.apply(this, [data]);
                     var nextVid = this.global.config.nextVid;
                     if (nextVid) {
                         if (this.isFullscreen() || this.isWebFullscreen()) {
@@ -1646,7 +1528,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     var timer = void 0;
                     var container = that.container.querySelector('.h5-layer-conatiner');
                     container.addEventListener('click', function (event) {
-                        if (event.target !== container) return;
+                        if (this !== event.target) return;
                         if (timer) {
                             clearTimeout(timer);
                             timer = null;
@@ -1665,15 +1547,16 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         }, 200);
                     });
                     container.addEventListener('dblclick', function (event) {
-                        if (event.target !== container) return;
+                        if (this !== event.target) return;
                         event.ctrlKey ? that.toggleWebFullscreen() : that.toggleFullscreen();
                     });
                     container.addEventListener('wheel', function (event) {
-                        if (event.target === container && (that.isFullscreen() || that.isWebFullscreen())) {
+                        if (this === event.target && (that.isFullscreen() || that.isWebFullscreen())) {
                             var delta = event.wheelDelta || event.detail || event.deltaY && -event.deltaY;
                             that.adjustVolume(delta > 0 ? 0.05 : -0.05);
                         }
                     });
+                    container = null;
                 });
             }
         }]);
@@ -1748,14 +1631,9 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         Logger.log('解除会员画质限制');
     }
 
-    function improveQualitySetting() {
-        new QualitySettingPatch().install();
-        Logger.log('设置里优先画质增加1080P选项并与当前画质对齐');
-    }
-
-    function improveQualityFallback() {
-        new QualityFallbackPatch().install();
-        Logger.log('改善当前画质逻辑');
+    function improveQualityLogic() {
+        new QualityPatch().install();
+        Logger.log('改善画质逻辑');
     }
 
     function improveAutoHide() {
@@ -1775,8 +1653,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
     blockAds();
     invalidateWatermarks();
     invalidateQualityLimitation();
-    improveQualitySetting();
-    improveQualityFallback();
+    improveQualityLogic();
     improveAutoHide();
     improveShortcuts();
 })();
