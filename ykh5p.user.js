@@ -997,7 +997,7 @@
 
             const playNext = proto.playNext;
             proto.playNext = function(data) {
-                if (data) playNext.apply(this, [data]);
+                if (data) return playNext.apply(this, [data]);
                 const nextVid = this.global.config.nextVid;
                 if (nextVid) {
                     if (this.isFullscreen() || this.isWebFullscreen()) {
@@ -1198,9 +1198,9 @@
         _addListener() {
             Hooker.hookInitPlayerEvent((that) => {
                 let timer;
-                const container = that.container.querySelector('.h5-layer-conatiner');
-                container.addEventListener('click', (event) => {
-                    if (event.target !== container) return;
+                let container = that.container.querySelector('.h5-layer-conatiner');
+                container.addEventListener('click', function(event) {
+                    if (this !== event.target) return;
                     if (timer) {
                         clearTimeout(timer);
                         timer = null;
@@ -1218,16 +1218,17 @@
                         timer = null;
                     }, 200);
                 });
-                container.addEventListener('dblclick', (event) => {
-                    if (event.target !== container) return;
+                container.addEventListener('dblclick', function(event) {
+                    if (this !== event.target) return;
                     event.ctrlKey ? that.toggleWebFullscreen() : that.toggleFullscreen();
                 });
-                container.addEventListener('wheel', (event) => {
-                    if (event.target === container && (that.isFullscreen() || that.isWebFullscreen())) {
+                container.addEventListener('wheel', function(event) {
+                    if (this === event.target && (that.isFullscreen() || that.isWebFullscreen())) {
                         const delta = event.wheelDelta || event.detail || (event.deltaY && -event.deltaY);
                         that.adjustVolume(delta > 0 ? 0.05 : -0.05);
                     }
                 });
+                container = null;
             });
         }
 
