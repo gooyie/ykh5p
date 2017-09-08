@@ -52,25 +52,27 @@
 
     class Hooker {
 
-        static hookCall(cb = ()=>{}) {
+        static _hookCall(cb) {
             const call = Function.prototype.call;
             Function.prototype.call = function(...args) {
                 let ret = call.apply(this, args);
                 try {
-                    if (args) cb(...args);
+                    if (args && cb(args)) {
+                        Function.prototype.call = call;
+                        cb = () => {};
+                        Logger.log('restored call');
+                    }
                 } catch (err) {
                     Logger.error(err.stack);
                 }
                 return ret;
             };
 
-            Function.prototype.call.toString = Function.prototype.call.toLocaleString = function() {
-                return 'function call() { [native code] }';
-            };
+            this._hookCall = null;
         }
 
         static _isEsModule(obj) {
-            return obj && obj.__esModule;
+            return obj.__esModule;
         }
 
         static _isFuction(arg) {
@@ -78,24 +80,44 @@
         }
 
         static _isModuleCall(args) { // module.exports, module, module.exports, require
-            return args.length === 4 && args[1] instanceof Object && args[1].hasOwnProperty('exports');
+            return args.length === 4 && args[1] && Object.getPrototypeOf(args[1]) === Object.prototype && args[1].hasOwnProperty('exports');
         }
 
-        static hookModuleCall(cb = ()=>{}) {
-            this.hookCall((...args) => {if (this._isModuleCall(args)) cb(...args);});
+        static _hookModuleCall(cb, pred) {
+            const callbacksMap = new Map([[pred, [cb]]]);
+            this._hookCall((args) => {
+                if (!this._isModuleCall(args)) return;
+                const exports = args[1].exports;
+                for (const [pred, callbacks] of callbacksMap) {
+                    if (!pred.apply(this, [exports])) continue;
+                    callbacks.forEach(cb => cb(exports, args));
+                    callbacksMap.delete(pred);
+                    !callbacksMap.size && (this._hookModuleCall = null);
+                    break;
+                }
+                return !callbacksMap.size;
+            });
+
+            this._hookModuleCall = (cb, pred) => {
+                if (callbacksMap.has(pred)) {
+                    callbacksMap.get(pred).push(cb);
+                } else {
+                    callbacksMap.set(pred, [cb]);
+                }
+            };
         }
 
-        static _isUpsModuleCall(exports = {}) {
+        static _isUpsModuleCall(exports) {
             return this._isEsModule(exports) && this._isFuction(exports.default) &&
                    exports.default.prototype && exports.default.prototype.hasOwnProperty('getServieceUrl') &&
                    /\.id\s*=\s*"ups"/.test(exports.default.toString());
         }
 
-        static hookUps(cb = ()=>{}) {
-            this.hookModuleCall((...args) => {if (this._isUpsModuleCall(args[1].exports)) cb(args[1].exports);});
+        static hookUps(cb) {
+            this._hookModuleCall(cb, this._isUpsModuleCall);
         }
 
-        static hookUpsOnComplete(cb = ()=>{}) {
+        static hookUpsOnComplete(cb) {
             this.hookUps((exports) => {
                 const onComplete = exports.default.prototype.onComplete;
                 exports.default.prototype.onComplete = function(res) {
@@ -105,26 +127,26 @@
             });
         }
 
-        static _isLogoModuleCall(exports = {}) {
+        static _isLogoModuleCall(exports) {
             return this._isEsModule(exports) && this._isFuction(exports.default) &&
                    exports.default.prototype && exports.default.prototype.hasOwnProperty('reset') &&
                    /logo\.style\.display/.test(exports.default.prototype.reset.toString());
         }
 
-        static hookLogo(cb = ()=>{}) {
-            this.hookModuleCall((...args) => {if (this._isLogoModuleCall(args[1].exports)) cb(args[1].exports);});
+        static hookLogo(cb) {
+            this._hookModuleCall(cb, this._isLogoModuleCall);
         }
 
-        static _isSettingModuleCall(exports = {}) {
+        static _isSettingModuleCall(exports) {
             return this._isEsModule(exports) && this._isFuction(exports.default) &&
                    exports.default.prototype && exports.default.prototype.hasOwnProperty('setQuality');
         }
 
-        static hookSetting(cb = ()=>{}) {
-            this.hookModuleCall((...args) => {if (this._isSettingModuleCall(args[1].exports)) cb(args[1].exports);});
+        static hookSetting(cb) {
+            this._hookModuleCall(cb, this._isSettingModuleCall);
         }
 
-        static hookRenderQulaity(cb = ()=>{}) {
+        static hookRenderQulaity(cb) {
             Hooker.hookSetting((exports) => {
                 const renderQulaity = exports.default.prototype.renderQulaity;
                 exports.default.prototype.renderQulaity = function(qualitys) {
@@ -134,7 +156,7 @@
             });
         }
 
-        static hookSetCurrentQuality(cb = ()=>{}) {
+        static hookSetCurrentQuality(cb) {
             Hooker.hookSetting((exports) => {
                 const setCurrentQuality = exports.default.prototype.setCurrentQuality;
                 exports.default.prototype.setCurrentQuality = function() {
@@ -144,16 +166,16 @@
             });
         }
 
-        static _isPlayerModuleCall(exports = {}) {
+        static _isPlayerModuleCall(exports) {
             return this._isEsModule(exports) && this._isFuction(exports.default) &&
                    exports.default.prototype && exports.default.prototype.hasOwnProperty('_resetPlayer');
         }
 
-        static hookPlayer(cb = ()=>{}) {
-            this.hookModuleCall((...args) => {if (this._isPlayerModuleCall(args[1].exports)) cb(args[1].exports);});
+        static hookPlayer(cb) {
+            this._hookModuleCall(cb, this._isPlayerModuleCall);
         }
 
-        static hookInitPlayerEvent(cb = ()=>{}) {
+        static hookInitPlayerEvent(cb) {
             Hooker.hookPlayer((exports) => {
                 const _initPlayerEvent = exports.default.prototype._initPlayerEvent;
                 exports.default.prototype._initPlayerEvent = function() {
@@ -163,7 +185,7 @@
             });
         }
 
-        static hookResetPlayerAfter(cb = ()=>{}) {
+        static hookResetPlayerAfter(cb) {
             Hooker.hookPlayer((exports) => {
                 const _resetPlayer = exports.default.prototype._resetPlayer;
                 exports.default.prototype._resetPlayer = function() {
@@ -177,43 +199,43 @@
             });
         }
 
-        static _isKeyShortcutsModuleCall(exports = {}) {
+        static _isKeyShortcutsModuleCall(exports) {
             return this._isEsModule(exports) && this._isFuction(exports.default) &&
                    exports.default.prototype && exports.default.prototype.hasOwnProperty('registerEvents');
         }
 
-        static hookKeyShortcuts(cb = ()=>{}) {
-            this.hookModuleCall((...args) => {if (this._isKeyShortcutsModuleCall(args[1].exports)) cb(args[1].exports);});
+        static hookKeyShortcuts(cb) {
+            this._hookModuleCall(cb, this._isKeyShortcutsModuleCall);
         }
 
-        static _isTipsModuleCall(exports = {}) {
+        static _isTipsModuleCall(exports) {
             return this._isEsModule(exports) && this._isFuction(exports.default) &&
                    exports.default.prototype && exports.default.prototype.hasOwnProperty('showHintTips');
         }
 
-        static hookTips(cb = ()=>{}) {
-            this.hookModuleCall((...args) => {if (this._isTipsModuleCall(args[1].exports)) cb(args[1].exports);});
+        static hookTips(cb) {
+            this._hookModuleCall(cb, this._isTipsModuleCall);
         }
 
-        static _isAdServiceModuleCall(exports = {}) {
+        static _isAdServiceModuleCall(exports) {
             return this._isEsModule(exports) && this._isFuction(exports.default) &&
                    exports.default.prototype && exports.default.prototype.hasOwnProperty('requestAdData');
         }
 
-        static hookAdService(cb = ()=>{}) {
-            this.hookModuleCall((...args) => {if (this._isAdServiceModuleCall(args[1].exports)) cb(args[1].exports);});
+        static hookAdService(cb) {
+            this._hookModuleCall(cb, this._isAdServiceModuleCall);
         }
 
-        static _isTopAreaModuleCall(exports = {}) {
+        static _isTopAreaModuleCall(exports) {
             return this._isEsModule(exports) && this._isFuction(exports.default) &&
                    exports.default.prototype && exports.default.prototype.hasOwnProperty('_timerHandler');
         }
 
-        static hookTopArea(cb = ()=>{}) {
-            this.hookModuleCall((...args) => {if (this._isTopAreaModuleCall(args[1].exports)) cb(args[1].exports);});
+        static hookTopArea(cb) {
+            this._hookModuleCall(cb, this._isTopAreaModuleCall);
         }
 
-        static hookTopAreaAddEvent(cb = ()=>{}) {
+        static hookTopAreaAddEvent(cb) {
             Hooker.hookTopArea((exports) => {
                 const _addEvent = exports.default.prototype._addEvent;
                 exports.default.prototype._addEvent = function() {
@@ -223,16 +245,16 @@
             });
         }
 
-        static _isPreviewLayerModuleCall(exports = {}) {
+        static _isPreviewLayerModuleCall(exports) {
             return this._isEsModule(exports) && this._isFuction(exports.default) &&
                    exports.default.prototype && exports.default.prototype.hasOwnProperty('setPreviewShow');
         }
 
-        static hookPreviewLayer(cb = ()=>{}) {
-            this.hookModuleCall((...args) => {if (this._isPreviewLayerModuleCall(args[1].exports)) cb(args[1].exports);});
+        static hookPreviewLayer(cb) {
+            this._hookModuleCall(cb, this._isPreviewLayerModuleCall);
         }
 
-        static hookPreviewLayerBind(cb = ()=>{}) {
+        static hookPreviewLayerBind(cb) {
             Hooker.hookPreviewLayer((exports) => {
                 const bind = exports.default.prototype.bind;
                 exports.default.prototype.bind = function() {
@@ -242,26 +264,26 @@
             });
         }
 
-        static _isSettingSeriesComponentModuleCall(exports = {}) {
+        static _isSettingSeriesComponentModuleCall(exports) {
             return this._isEsModule(exports) && this._isFuction(exports.default) &&
                    exports.default.prototype && exports.default.prototype.hasOwnProperty('_addEvent') &&
                    exports.default.prototype._addEvent.toString().includes('seriesliseLayer');
         }
 
-        static hookSettingSeries(cb = ()=>{}) {
-            this.hookModuleCall((...args) => {if (this._isSettingSeriesComponentModuleCall(args[1].exports)) cb(args[1].exports);});
+        static hookSettingSeries(cb) {
+            this._hookModuleCall(cb, this._isSettingSeriesComponentModuleCall);
         }
 
-        static _isGlobalModuleCall(exports = {}) {
+        static _isGlobalModuleCall(exports) {
             return this._isEsModule(exports) && this._isFuction(exports.default) &&
                    exports.default.prototype && exports.default.prototype.hasOwnProperty('resetConfig');
         }
 
-        static hookGlobal(cb = ()=>{}) {
-            this.hookModuleCall((...args) => {if (this._isGlobalModuleCall(args[1].exports)) cb(args[1].exports);});
+        static hookGlobal(cb) {
+            this._hookModuleCall(cb, this._isGlobalModuleCall);
         }
 
-        static hookGlobalConstructorAfter(cb = ()=>{}) {
+        static hookGlobalConstructorAfter(cb) {
             Hooker.hookGlobal((exports) => {
                 const constructor = exports.default;
                 exports.default = function(...args) {
@@ -272,7 +294,7 @@
             });
         }
 
-        static hookGlobalInit(cb = ()=>{}) {
+        static hookGlobalInit(cb) {
             Hooker.hookGlobal((exports) => {
                 const init = exports.default.prototype.init;
                 exports.default.prototype.init = function(config) {
@@ -282,7 +304,7 @@
             });
         }
 
-        static hookGlobalDeal(cb = ()=>{}) {
+        static hookGlobalDeal(cb) {
             Hooker.hookGlobal((exports) => {
                 const deal = exports.default.prototype.deal;
                 exports.default.prototype.deal = function() {
@@ -292,7 +314,7 @@
             });
         }
 
-        static hookGlobalResetAfter(cb = ()=>{}) {
+        static hookGlobalResetAfter(cb) {
             Hooker.hookGlobal((exports) => {
                 const reset = exports.default.prototype.reset;
                 exports.default.prototype.reset = function() {
@@ -310,82 +332,73 @@
             return code.slice(code.indexOf('{') + 1, code.lastIndexOf('}'));
         }
 
-        static _isBaseModuleCall(exports = {}) {
+        static _isBaseModuleCall(exports) {
             return exports.SingleVideoControl && exports.MultiVideoControl;
         }
 
+        static hookBase(cb, mode) {
+            const callbacks = [];
+            const codeCallbacks = [];
+            (mode === 'code' ? codeCallbacks : callbacks).push(cb);
 
-        static hookBase(cb = ()=>{}, mode) {
-            if (!this._hookBaseCallbacks) {
-                this._hookBaseCallbacks = [];
-                this._hookBaseCodeCallbacks = [];
-                (mode === 'code' ? this._hookBaseCodeCallbacks : this._hookBaseCallbacks).push(cb);
-
-                this.hookModuleCall((...args) => {
-                    if (this._isBaseModuleCall(args[1].exports)) {
-                        if (this._hookBaseCodeCallbacks.length > 0) {
-                            let code = args[3].m[args[1].i].toString();
-                            code = this._hookBaseCodeCallbacks.reduce((c, cb) => cb(c), code);
-                            const fn = new Function(...this._extractArgsName(code), this._extractFunctionBody(code));
-                            fn.apply(args[0], args.slice(1));
-                        }
-                        this._hookBaseCallbacks.forEach(cb => cb(args[1].exports));
-                    }
-                });
-            } else {
-                (mode === 'code' ? this._hookBaseCodeCallbacks : this._hookBaseCallbacks).push(cb);
-            }
-        }
-
-        static hookOz(cb = ()=>{}) {
-            if (!this._hookOzCallbacks) {
-                const self = this;
-                this._hookOzCallbacks = [cb];
-                const window = unsafeWindow;
-                let oz = window.oz; // oz 可能先于脚本执行
-
-                Object.defineProperty(window, 'oz', {
-                    get: () => {
-                        return oz;
-                    },
-                    set: (value) => {
-                        oz = value;
-                        try {
-                            self._hookOzCallbacks.forEach(cb => cb(oz));
-                        } catch (err) {
-                            Logger.error(err.stack);
-                        }
-                    }
-                });
-
-                if (oz) window.oz = oz; // oz 先于脚本执行
-            } else {
-                this._hookOzCallbacks.push(cb);
-            }
-        }
-
-        static hookDefine(name, cb = ()=>{}) {
-            if (!this._hookDefineCallbacksMap) {
-                this._hookDefineCallbacksMap = new Map([[name, [cb]]]);
-                this.hookOz((oz) => {
-                    const self = this;
-                    const define = oz.define;
-                    oz.define = function(name, deps, block) {
-                        if (self._hookDefineCallbacksMap.has(name)) {
-                            let code = block.toString();
-                            code = self._hookDefineCallbacksMap.get(name).reduce((c, cb) => cb(c), code);
-                            block = new Function(...self._extractArgsName(code), self._extractFunctionBody(code));
-                        }
-                        define(name, deps, block);
-                    };
-                });
-            } else {
-                if (this._hookDefineCallbacksMap.has(name)) {
-                    this._hookDefineCallbacksMap.get(name).push(cb);
-                } else {
-                    this._hookDefineCallbacksMap.set(name, [cb]);
+            this._hookModuleCall((exports, args) => {
+                if (codeCallbacks.length > 0) {
+                    let code = args[3].m[args[1].i].toString();
+                    code = codeCallbacks.reduce((c, cb) => cb(c), code);
+                    const fn = new Function(...this._extractArgsName(code), this._extractFunctionBody(code));
+                    fn.apply(args[0], args.slice(1));
                 }
-            }
+                callbacks.forEach(cb => cb(args[1].exports));
+                this.hookBase = null;
+            }, this._isBaseModuleCall);
+
+            this.hookBase = (cb, mode) => (mode === 'code' ? codeCallbacks : callbacks).push(cb);
+        }
+
+        static hookOz(cb) {
+            const callbacks = [cb];
+            const window = unsafeWindow;
+            let oz = window.oz; // oz 可能先于脚本执行
+            Object.defineProperty(window, 'oz', {
+                get: () => {
+                    return oz;
+                },
+                set: (value) => {
+                    oz = value;
+                    try {
+                        callbacks.forEach(cb => cb(oz));
+                    } catch (err) {
+                        Logger.error(err.stack);
+                    }
+                }
+            });
+            if (oz) window.oz = oz; // oz 先于脚本执行
+
+            this.hookOz = (cb) => callbacks.push(cb);
+        }
+
+        static hookDefine(name, cb) {
+            const callbacksMap = new Map([[name, [cb]]]);
+            this.hookOz((oz) => {
+                const self = this;
+                const define = oz.define;
+                oz.define = function(name, deps, block) {
+                    if (callbacksMap.has(name)) {
+                        let code = block.toString();
+                        code = callbacksMap.get(name).reduce((c, cb) => cb(c), code);
+                        block = new Function(...self._extractArgsName(code), self._extractFunctionBody(code));
+                    }
+                    define(name, deps, block);
+                };
+            });
+
+            this.hookDefine = (name, cb) => {
+                if (callbacksMap.has(name)) {
+                    callbacksMap.get(name).push(cb);
+                } else {
+                    callbacksMap.set(name, [cb]);
+                }
+            };
         }
 
     }
