@@ -510,6 +510,27 @@
 
     }
 
+    class SkipLocalPlayRecordPatch extends Patch {
+
+        constructor() {
+            super();
+        }
+
+        _apply() {
+            Hooker.hookPlayer((exports) => {
+                const skipLocalPlayRecord = exports.default.prototype.skipLocalPlayRecord;
+                exports.default.prototype.skipLocalPlayRecord = function() {
+                    const cfg = this.global.config;
+                    const headPosition = cfg.headPosition;
+                    cfg.headPosition = cfg.playRecord;
+                    skipLocalPlayRecord.apply(this);
+                    cfg.headPosition = headPosition;
+                };
+            });
+        }
+
+    }
+
     class DashboardPatch extends Patch {
 
         constructor() {
@@ -782,6 +803,7 @@
             this._addPrevInfo();
             this._playAfterPlayerReset();
             (new ContinuePlayPatch()).install();
+            (new SkipLocalPlayRecordPatch()).install();
             (new FullscreenPatch()).install();
         }
 
