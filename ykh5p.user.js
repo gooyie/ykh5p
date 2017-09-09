@@ -165,17 +165,17 @@
             });
         }
 
-        static _isPlayerModuleCall(exports) {
+        static _isManageModuleCall(exports) {
             return this._isEsModule(exports) && this._isFuction(exports.default) &&
                    exports.default.prototype && exports.default.prototype.hasOwnProperty('_resetPlayer');
         }
 
-        static hookPlayer(cb) {
-            this._hookModuleCall(cb, this._isPlayerModuleCall);
+        static hookManage(cb) {
+            this._hookModuleCall(cb, this._isManageModuleCall);
         }
 
         static hookInitPlayerEvent(cb) {
-            Hooker.hookPlayer((exports) => {
+            Hooker.hookManage((exports) => {
                 const _initPlayerEvent = exports.default.prototype._initPlayerEvent;
                 exports.default.prototype._initPlayerEvent = function() {
                     cb(this);
@@ -185,7 +185,7 @@
         }
 
         static hookResetPlayerAfter(cb) {
-            Hooker.hookPlayer((exports) => {
+            Hooker.hookManage((exports) => {
                 const _resetPlayer = exports.default.prototype._resetPlayer;
                 exports.default.prototype._resetPlayer = function() {
                     try {
@@ -517,7 +517,7 @@
         }
 
         _apply() {
-            Hooker.hookPlayer((exports) => {
+            Hooker.hookManage((exports) => {
                 const skipLocalPlayRecord = exports.default.prototype.skipLocalPlayRecord;
                 exports.default.prototype.skipLocalPlayRecord = function() {
                     const cfg = this.global.config;
@@ -786,7 +786,7 @@
         }
     }
 
-    class PlayerPatch extends Patch {
+    class ManagePatch extends Patch {
 
         constructor() {
             super();
@@ -794,7 +794,7 @@
 
         _apply() {
             this._prepare();
-            this._hookPlayer();
+            this._hookManage();
         }
 
         _prepare() {
@@ -853,11 +853,11 @@
             });
         }
 
-        _hookPlayer() {
-            Hooker.hookPlayer(this._hookPlayerCallback.bind(this));
+        _hookManage() {
+            Hooker.hookManage(this._hookManageCallback.bind(this));
         }
 
-        _hookPlayerCallback(exports) {
+        _hookManageCallback(exports) {
             const proto = exports.default.prototype;
 
             const _init = proto._init;
@@ -1027,7 +1027,7 @@
 
     }
 
-    const playerPatch = new PlayerPatch();
+    const managePatch = new ManagePatch();
 
     class KeyShortcutsPatch extends Patch {
 
@@ -1041,7 +1041,7 @@
         }
 
         _prepare() {
-            playerPatch.install();
+            managePatch.install();
             this._obtainPlayer();
         }
 
@@ -1186,7 +1186,7 @@
         }
 
         _prepare() {
-            playerPatch.install();
+            managePatch.install();
             this._addStyle();
         }
 
