@@ -4,7 +4,7 @@
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.10.0
+// @version      0.10.1
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -470,11 +470,8 @@
         _apply() {
             Hooker.hookUpsOnComplete((res) => {
                 const data = res.data;
-                if (data.user) {
-                    data.user.vip = true;
-                } else {
-                    data.user = {vip: true};
-                }
+                data.user = Object.assign(data.user || {}, {vip: true});
+                data.vip = Object.assign(data.vip || {}, {hd3: true});
             });
         }
 
@@ -566,6 +563,9 @@
                 const proto = exports.__Dashboard.prototype;
 
                 proto.bindAutoHide = function() {
+                    this._args.show = 'function' === typeof this._args.show ? this._args.show : () => {};
+                    this._args.hide = 'function' === typeof this._args.hide ? this._args.show : () => {};
+
                     this._el.addEventListener('mouseover', () => this._mouseover = true);
                     this._el.addEventListener('mouseleave', () => this._mouseover = false);
                     this.on('mouseoverpreview', () => this._mouseoverpreview = true);
@@ -598,18 +598,18 @@
                     return this._el.style.display !== 'none';
                 };
 
-                const show = proto.show;
                 proto.show = function() {
                     this.emit('dashboardshow');
                     this._parent.style.cursor = '';
-                    show.apply(this);
+                    this._el.style.display = '';
+                    this._args.show();
                 };
 
-                const hide = proto.hide;
                 proto.hide = function() {
                     this.emit('dashboardhide');
                     this._parent.style.cursor = 'none'; // 隐藏鼠标
-                    hide.apply(this);
+                    this._el.style.display = 'none';
+                    this._args.show();
                 };
             });
         }
@@ -701,7 +701,7 @@
 
     }
 
-    class AntiAdPatch extends Patch {
+    class AutoSkipPatch extends Patch {
 
         constructor() {
             super();
@@ -1156,6 +1156,10 @@
                     return;
                 }
                 break;
+            case 27: // ESC
+                if (!event.ctrlKey && !event.shiftKey && !event.altKey)
+                    this._player.isWebFullscreen() && this._player.exitWebFullscreen();
+                return;
             default:
                 if (event.keyCode >= 48 && event.keyCode <= 57) { // 0 ~ 9
                     if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
@@ -1258,31 +1262,36 @@
 
     }
 
-    class H5Patch extends Patch {
+    // class H5Patch extends Patch {
 
-        constructor() {
-            super();
-        }
+        // constructor() {
+            // super();
+        // }
 
-        _apply() {
-            Hooker.hookDefine('page/find/play/player/load', this._forceH5.bind(this));
-        }
+        // _apply() {
+            // Hooker.hookDefine('page/find/play/player/load', this._forceH5.bind(this));
+        // }
 
-        _forceH5(code) {
-            return code.replace(/(if\s*\().*?(\)\s*\{)/, '$1true$2').replace('window.sessionStorage', 'null');
-        }
+        // _forceH5(code) {
+            // return code.replace(/(if\s*\().*?(\)\s*\{)/, '$1true$2').replace('window.sessionStorage', 'null');
+        // }
 
-    }
+    // }
 
-    function enableH5Player() {
-        (new H5Patch()).install();
+    function ensureH5PlayerEnabled() {
+        // (new H5Patch()).install();
+        unsafeWindow.navigator.plugins['Shockwave Flash'] = undefined;
         Logger.log('启用html5播放器');
     }
 
     function blockAds() {
         (new AdBlockPatch()).install();
-        (new AntiAdPatch()).install();
         Logger.log('和谐广告');
+    }
+
+    function fixAutoSkip() {
+        (new AutoSkipPatch()).install();
+        Logger.log('修复跳过片头片尾、播放记录');
     }
 
     function invalidateWatermarks() {
@@ -1313,8 +1322,9 @@
 
 //=============================================================================
 
-    enableH5Player();
+    ensureH5PlayerEnabled();
     blockAds();
+    fixAutoSkip();
     invalidateWatermarks();
     invalidateQualityLimitation();
     improveQualityLogic();

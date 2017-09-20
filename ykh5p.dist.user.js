@@ -18,7 +18,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.10.0
+// @version      0.10.1
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -272,19 +272,19 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 });
             }
         }, {
-            key: '_isPlayerModuleCall',
-            value: function _isPlayerModuleCall(exports) {
+            key: '_isManageModuleCall',
+            value: function _isManageModuleCall(exports) {
                 return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('_resetPlayer');
             }
         }, {
-            key: 'hookPlayer',
-            value: function hookPlayer(cb) {
-                this._hookModuleCall(cb, this._isPlayerModuleCall);
+            key: 'hookManage',
+            value: function hookManage(cb) {
+                this._hookModuleCall(cb, this._isManageModuleCall);
             }
         }, {
             key: 'hookInitPlayerEvent',
             value: function hookInitPlayerEvent(cb) {
-                Hooker.hookPlayer(function (exports) {
+                Hooker.hookManage(function (exports) {
                     var _initPlayerEvent = exports.default.prototype._initPlayerEvent;
                     exports.default.prototype._initPlayerEvent = function () {
                         cb(this);
@@ -295,7 +295,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }, {
             key: 'hookResetPlayerAfter',
             value: function hookResetPlayerAfter(cb) {
-                Hooker.hookPlayer(function (exports) {
+                Hooker.hookManage(function (exports) {
                     var _resetPlayer = exports.default.prototype._resetPlayer;
                     exports.default.prototype._resetPlayer = function () {
                         try {
@@ -649,11 +649,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             value: function _apply() {
                 Hooker.hookUpsOnComplete(function (res) {
                     var data = res.data;
-                    if (data.user) {
-                        data.user.vip = true;
-                    } else {
-                        data.user = { vip: true };
-                    }
+                    data.user = Object.assign(data.user || {}, { vip: true });
+                    data.vip = Object.assign(data.vip || {}, { hd3: true });
                 });
             }
         }]);
@@ -726,7 +723,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         _createClass(SkipLocalPlayRecordPatch, [{
             key: '_apply',
             value: function _apply() {
-                Hooker.hookPlayer(function (exports) {
+                Hooker.hookManage(function (exports) {
                     var skipLocalPlayRecord = exports.default.prototype.skipLocalPlayRecord;
                     exports.default.prototype.skipLocalPlayRecord = function () {
                         var cfg = this.global.config;
@@ -795,6 +792,9 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     proto.bindAutoHide = function () {
                         var _this13 = this;
 
+                        this._args.show = 'function' === typeof this._args.show ? this._args.show : function () {};
+                        this._args.hide = 'function' === typeof this._args.hide ? this._args.show : function () {};
+
                         this._el.addEventListener('mouseover', function () {
                             return _this13._mouseover = true;
                         });
@@ -833,18 +833,18 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         return this._el.style.display !== 'none';
                     };
 
-                    var show = proto.show;
                     proto.show = function () {
                         this.emit('dashboardshow');
                         this._parent.style.cursor = '';
-                        show.apply(this);
+                        this._el.style.display = '';
+                        this._args.show();
                     };
 
-                    var hide = proto.hide;
                     proto.hide = function () {
                         this.emit('dashboardhide');
                         this._parent.style.cursor = 'none'; // 隐藏鼠标
-                        hide.apply(this);
+                        this._el.style.display = 'none';
+                        this._args.show();
                     };
                 });
             }
@@ -968,16 +968,16 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return ContinuePlayPatch;
     }(Patch);
 
-    var AntiAdPatch = function (_Patch10) {
-        _inherits(AntiAdPatch, _Patch10);
+    var AutoSkipPatch = function (_Patch10) {
+        _inherits(AutoSkipPatch, _Patch10);
 
-        function AntiAdPatch() {
-            _classCallCheck(this, AntiAdPatch);
+        function AutoSkipPatch() {
+            _classCallCheck(this, AutoSkipPatch);
 
-            return _possibleConstructorReturn(this, (AntiAdPatch.__proto__ || Object.getPrototypeOf(AntiAdPatch)).call(this));
+            return _possibleConstructorReturn(this, (AutoSkipPatch.__proto__ || Object.getPrototypeOf(AutoSkipPatch)).call(this));
         }
 
-        _createClass(AntiAdPatch, [{
+        _createClass(AutoSkipPatch, [{
             key: '_apply',
             value: function _apply() {
                 Hooker.hookGlobalConstructorAfter(function (that) {
@@ -989,7 +989,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             }
         }]);
 
-        return AntiAdPatch;
+        return AutoSkipPatch;
     }(Patch);
 
     var FullscreenPatch = function (_Patch11) {
@@ -1066,20 +1066,20 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return WebFullscreen;
     }();
 
-    var PlayerPatch = function (_Patch12) {
-        _inherits(PlayerPatch, _Patch12);
+    var ManagePatch = function (_Patch12) {
+        _inherits(ManagePatch, _Patch12);
 
-        function PlayerPatch() {
-            _classCallCheck(this, PlayerPatch);
+        function ManagePatch() {
+            _classCallCheck(this, ManagePatch);
 
-            return _possibleConstructorReturn(this, (PlayerPatch.__proto__ || Object.getPrototypeOf(PlayerPatch)).call(this));
+            return _possibleConstructorReturn(this, (ManagePatch.__proto__ || Object.getPrototypeOf(ManagePatch)).call(this));
         }
 
-        _createClass(PlayerPatch, [{
+        _createClass(ManagePatch, [{
             key: '_apply',
             value: function _apply() {
                 this._prepare();
-                this._hookPlayer();
+                this._hookManage();
             }
         }, {
             key: '_prepare',
@@ -1146,13 +1146,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 });
             }
         }, {
-            key: '_hookPlayer',
-            value: function _hookPlayer() {
-                Hooker.hookPlayer(this._hookPlayerCallback.bind(this));
+            key: '_hookManage',
+            value: function _hookManage() {
+                Hooker.hookManage(this._hookManageCallback.bind(this));
             }
         }, {
-            key: '_hookPlayerCallback',
-            value: function _hookPlayerCallback(exports) {
+            key: '_hookManageCallback',
+            value: function _hookManageCallback(exports) {
                 var proto = exports.default.prototype;
 
                 var _init = proto._init;
@@ -1323,10 +1323,10 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             }
         }]);
 
-        return PlayerPatch;
+        return ManagePatch;
     }(Patch);
 
-    var playerPatch = new PlayerPatch();
+    var managePatch = new ManagePatch();
 
     var KeyShortcutsPatch = function (_Patch13) {
         _inherits(KeyShortcutsPatch, _Patch13);
@@ -1346,7 +1346,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }, {
             key: '_prepare',
             value: function _prepare() {
-                playerPatch.install();
+                managePatch.install();
                 this._obtainPlayer();
             }
         }, {
@@ -1474,6 +1474,10 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                             return;
                         }
                         break;
+                    case 27:
+                        // ESC
+                        if (!event.ctrlKey && !event.shiftKey && !event.altKey) this._player.isWebFullscreen() && this._player.exitWebFullscreen();
+                        return;
                     default:
                         if (event.keyCode >= 48 && event.keyCode <= 57) {
                             // 0 ~ 9
@@ -1513,7 +1517,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }, {
             key: '_prepare',
             value: function _prepare() {
-                playerPatch.install();
+                managePatch.install();
                 this._addStyle();
             }
         }, {
@@ -1586,39 +1590,36 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return ShortcutsPatch;
     }(Patch);
 
-    var H5Patch = function (_Patch16) {
-        _inherits(H5Patch, _Patch16);
+    // class H5Patch extends Patch {
 
-        function H5Patch() {
-            _classCallCheck(this, H5Patch);
+    // constructor() {
+    // super();
+    // }
 
-            return _possibleConstructorReturn(this, (H5Patch.__proto__ || Object.getPrototypeOf(H5Patch)).call(this));
-        }
+    // _apply() {
+    // Hooker.hookDefine('page/find/play/player/load', this._forceH5.bind(this));
+    // }
 
-        _createClass(H5Patch, [{
-            key: '_apply',
-            value: function _apply() {
-                Hooker.hookDefine('page/find/play/player/load', this._forceH5.bind(this));
-            }
-        }, {
-            key: '_forceH5',
-            value: function _forceH5(code) {
-                return code.replace(/(if\s*\().*?(\)\s*\{)/, '$1true$2').replace('window.sessionStorage', 'null');
-            }
-        }]);
+    // _forceH5(code) {
+    // return code.replace(/(if\s*\().*?(\)\s*\{)/, '$1true$2').replace('window.sessionStorage', 'null');
+    // }
 
-        return H5Patch;
-    }(Patch);
+    // }
 
-    function enableH5Player() {
-        new H5Patch().install();
+    function ensureH5PlayerEnabled() {
+        // (new H5Patch()).install();
+        unsafeWindow.navigator.plugins['Shockwave Flash'] = undefined;
         Logger.log('启用html5播放器');
     }
 
     function blockAds() {
         new AdBlockPatch().install();
-        new AntiAdPatch().install();
         Logger.log('和谐广告');
+    }
+
+    function fixAutoSkip() {
+        new AutoSkipPatch().install();
+        Logger.log('修复跳过片头片尾、播放记录');
     }
 
     function invalidateWatermarks() {
@@ -1649,8 +1650,9 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
     //=============================================================================
 
-    enableH5Player();
+    ensureH5PlayerEnabled();
     blockAds();
+    fixAutoSkip();
     invalidateWatermarks();
     invalidateQualityLimitation();
     improveQualityLogic();
