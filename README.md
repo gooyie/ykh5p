@@ -1,6 +1,6 @@
 # ykh5p
 
-优酷官方`html5`播放器，目前处于测试阶段，功能不完善。
+优酷官方`html5`播放器，功能还不是很完善，播放体验不佳。脚本用于改善优酷官方html5播放器播放体验。
 
 ## 脚本管理器兼容
 `Greasemonkey`用不了（沙箱限制），`Tampermonkey`和`Violentmonkey`可正常使用。
