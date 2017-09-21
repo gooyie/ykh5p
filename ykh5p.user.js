@@ -4,7 +4,7 @@
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.10.1
+// @version      0.11.0
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -429,20 +429,32 @@
 
     }
 
-    class AdBlockPatch extends Patch {
+    class MockAdsPatch extends Patch {
 
         constructor() {
             super();
         }
 
         _apply() {
+            const self = this;
             Hooker.hookAdService((exports) => {
-                exports.default.prototype.requestAdData = function(arg) {
+                exports.default.prototype.requestAdData = function(obj/* , params */) {
                     setTimeout(() => {
-                        this.fail(arg, {code: '404', message: 'error'});
+                        if ('frontad' === obj.adtype) {
+                            this.success(obj, self._fakeFrontAdData());
+                        } else {
+                            this.fail(obj, {code: '404', message: 'error'});
+                        }
                     }, 0);
                 };
             });
+        }
+
+        _fakeFrontAdData() {
+            const data = {
+                VAL: [],
+            };
+            return data;
         }
 
     }
@@ -697,19 +709,6 @@
                     that.gotoVideo(that.global.config.nextVid);
                 }
             }
-        }
-
-    }
-
-    class AutoSkipPatch extends Patch {
-
-        constructor() {
-            super();
-        }
-
-        _apply() {
-            Hooker.hookGlobalConstructorAfter(that => that.cycleData.isFront = true);
-            Hooker.hookGlobalResetAfter(that => that.cycleData.isFront = true);
         }
 
     }
@@ -1284,14 +1283,9 @@
         Logger.log('启用html5播放器');
     }
 
-    function blockAds() {
-        (new AdBlockPatch()).install();
+    function mockAds() {
+        (new MockAdsPatch()).install();
         Logger.log('和谐广告');
-    }
-
-    function fixAutoSkip() {
-        (new AutoSkipPatch()).install();
-        Logger.log('修复跳过片头片尾、播放记录');
     }
 
     function invalidateWatermarks() {
@@ -1323,8 +1317,7 @@
 //=============================================================================
 
     ensureH5PlayerEnabled();
-    blockAds();
-    fixAutoSkip();
+    mockAds();
     invalidateWatermarks();
     invalidateQualityLimitation();
     improveQualityLogic();

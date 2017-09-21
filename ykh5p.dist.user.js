@@ -18,7 +18,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.10.1
+// @version      0.11.0
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -587,31 +587,44 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return Patch;
     }();
 
-    var AdBlockPatch = function (_Patch) {
-        _inherits(AdBlockPatch, _Patch);
+    var MockAdsPatch = function (_Patch) {
+        _inherits(MockAdsPatch, _Patch);
 
-        function AdBlockPatch() {
-            _classCallCheck(this, AdBlockPatch);
+        function MockAdsPatch() {
+            _classCallCheck(this, MockAdsPatch);
 
-            return _possibleConstructorReturn(this, (AdBlockPatch.__proto__ || Object.getPrototypeOf(AdBlockPatch)).call(this));
+            return _possibleConstructorReturn(this, (MockAdsPatch.__proto__ || Object.getPrototypeOf(MockAdsPatch)).call(this));
         }
 
-        _createClass(AdBlockPatch, [{
+        _createClass(MockAdsPatch, [{
             key: '_apply',
             value: function _apply() {
+                var self = this;
                 Hooker.hookAdService(function (exports) {
-                    exports.default.prototype.requestAdData = function (arg) {
+                    exports.default.prototype.requestAdData = function (obj /* , params */) {
                         var _this5 = this;
 
                         setTimeout(function () {
-                            _this5.fail(arg, { code: '404', message: 'error' });
+                            if ('frontad' === obj.adtype) {
+                                _this5.success(obj, self._fakeFrontAdData());
+                            } else {
+                                _this5.fail(obj, { code: '404', message: 'error' });
+                            }
                         }, 0);
                     };
                 });
             }
+        }, {
+            key: '_fakeFrontAdData',
+            value: function _fakeFrontAdData() {
+                var data = {
+                    VAL: []
+                };
+                return data;
+            }
         }]);
 
-        return AdBlockPatch;
+        return MockAdsPatch;
     }(Patch);
 
     var WatermarksPatch = function (_Patch2) {
@@ -968,32 +981,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return ContinuePlayPatch;
     }(Patch);
 
-    var AutoSkipPatch = function (_Patch10) {
-        _inherits(AutoSkipPatch, _Patch10);
-
-        function AutoSkipPatch() {
-            _classCallCheck(this, AutoSkipPatch);
-
-            return _possibleConstructorReturn(this, (AutoSkipPatch.__proto__ || Object.getPrototypeOf(AutoSkipPatch)).call(this));
-        }
-
-        _createClass(AutoSkipPatch, [{
-            key: '_apply',
-            value: function _apply() {
-                Hooker.hookGlobalConstructorAfter(function (that) {
-                    return that.cycleData.isFront = true;
-                });
-                Hooker.hookGlobalResetAfter(function (that) {
-                    return that.cycleData.isFront = true;
-                });
-            }
-        }]);
-
-        return AutoSkipPatch;
-    }(Patch);
-
-    var FullscreenPatch = function (_Patch11) {
-        _inherits(FullscreenPatch, _Patch11);
+    var FullscreenPatch = function (_Patch10) {
+        _inherits(FullscreenPatch, _Patch10);
 
         function FullscreenPatch() {
             _classCallCheck(this, FullscreenPatch);
@@ -1066,8 +1055,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return WebFullscreen;
     }();
 
-    var ManagePatch = function (_Patch12) {
-        _inherits(ManagePatch, _Patch12);
+    var ManagePatch = function (_Patch11) {
+        _inherits(ManagePatch, _Patch11);
 
         function ManagePatch() {
             _classCallCheck(this, ManagePatch);
@@ -1328,8 +1317,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
     var managePatch = new ManagePatch();
 
-    var KeyShortcutsPatch = function (_Patch13) {
-        _inherits(KeyShortcutsPatch, _Patch13);
+    var KeyShortcutsPatch = function (_Patch12) {
+        _inherits(KeyShortcutsPatch, _Patch12);
 
         function KeyShortcutsPatch() {
             _classCallCheck(this, KeyShortcutsPatch);
@@ -1499,8 +1488,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return KeyShortcutsPatch;
     }(Patch);
 
-    var MouseShortcutsPatch = function (_Patch14) {
-        _inherits(MouseShortcutsPatch, _Patch14);
+    var MouseShortcutsPatch = function (_Patch13) {
+        _inherits(MouseShortcutsPatch, _Patch13);
 
         function MouseShortcutsPatch() {
             _classCallCheck(this, MouseShortcutsPatch);
@@ -1568,8 +1557,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return MouseShortcutsPatch;
     }(Patch);
 
-    var ShortcutsPatch = function (_Patch15) {
-        _inherits(ShortcutsPatch, _Patch15);
+    var ShortcutsPatch = function (_Patch14) {
+        _inherits(ShortcutsPatch, _Patch14);
 
         function ShortcutsPatch() {
             _classCallCheck(this, ShortcutsPatch);
@@ -1612,14 +1601,9 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         Logger.log('启用html5播放器');
     }
 
-    function blockAds() {
-        new AdBlockPatch().install();
+    function mockAds() {
+        new MockAdsPatch().install();
         Logger.log('和谐广告');
-    }
-
-    function fixAutoSkip() {
-        new AutoSkipPatch().install();
-        Logger.log('修复跳过片头片尾、播放记录');
     }
 
     function invalidateWatermarks() {
@@ -1651,8 +1635,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
     //=============================================================================
 
     ensureH5PlayerEnabled();
-    blockAds();
-    fixAutoSkip();
+    mockAds();
     invalidateWatermarks();
     invalidateQualityLimitation();
     improveQualityLogic();
