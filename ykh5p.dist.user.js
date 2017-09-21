@@ -18,7 +18,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.11.0
+// @version      0.11.1
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -724,36 +724,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return QualityPatch;
     }(Patch);
 
-    var SkipLocalPlayRecordPatch = function (_Patch5) {
-        _inherits(SkipLocalPlayRecordPatch, _Patch5);
-
-        function SkipLocalPlayRecordPatch() {
-            _classCallCheck(this, SkipLocalPlayRecordPatch);
-
-            return _possibleConstructorReturn(this, (SkipLocalPlayRecordPatch.__proto__ || Object.getPrototypeOf(SkipLocalPlayRecordPatch)).call(this));
-        }
-
-        _createClass(SkipLocalPlayRecordPatch, [{
-            key: '_apply',
-            value: function _apply() {
-                Hooker.hookManage(function (exports) {
-                    var skipLocalPlayRecord = exports.default.prototype.skipLocalPlayRecord;
-                    exports.default.prototype.skipLocalPlayRecord = function () {
-                        var cfg = this.global.config;
-                        var headPosition = cfg.headPosition;
-                        cfg.headPosition = cfg.playRecord;
-                        skipLocalPlayRecord.apply(this);
-                        cfg.headPosition = headPosition;
-                    };
-                });
-            }
-        }]);
-
-        return SkipLocalPlayRecordPatch;
-    }(Patch);
-
-    var DashboardPatch = function (_Patch6) {
-        _inherits(DashboardPatch, _Patch6);
+    var DashboardPatch = function (_Patch5) {
+        _inherits(DashboardPatch, _Patch5);
 
         function DashboardPatch() {
             _classCallCheck(this, DashboardPatch);
@@ -789,10 +761,10 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }, {
             key: '_exposeDashboard',
             value: function _exposeDashboard() {
-                var _this12 = this;
+                var _this11 = this;
 
                 Hooker.hookBase(function (code) {
-                    var varName = _this12._findVarName(code);
+                    var varName = _this11._findVarName(code);
                     return code.replace(/\.exports\s*=\s*(\w+)/, '$&;$1.__Dashboard=' + varName + ';');
                 }, 'code');
             }
@@ -803,38 +775,38 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     var proto = exports.__Dashboard.prototype;
 
                     proto.bindAutoHide = function () {
-                        var _this13 = this;
+                        var _this12 = this;
 
                         this._args.show = 'function' === typeof this._args.show ? this._args.show : function () {};
                         this._args.hide = 'function' === typeof this._args.hide ? this._args.show : function () {};
 
                         this._el.addEventListener('mouseover', function () {
-                            return _this13._mouseover = true;
+                            return _this12._mouseover = true;
                         });
                         this._el.addEventListener('mouseleave', function () {
-                            return _this13._mouseover = false;
+                            return _this12._mouseover = false;
                         });
                         this.on('mouseoverpreview', function () {
-                            return _this13._mouseoverpreview = true;
+                            return _this12._mouseoverpreview = true;
                         });
                         this.on('mouseleavepreview', function () {
-                            return _this13._mouseoverpreview = false;
+                            return _this12._mouseoverpreview = false;
                         });
                         this._video.on('play', function () {
-                            if (!_this13._mouseover && !_this13._mouseoverpreview) _this13._hideTimeout = setTimeout(_this13.hide.bind(_this13), _this13._args.autoHide);
+                            if (!_this12._mouseover && !_this12._mouseoverpreview) _this12._hideTimeout = setTimeout(_this12.hide.bind(_this12), _this12._args.autoHide);
                         });
                         this._video.on('pause', function () {
-                            _this13._hideTimeout && clearTimeout(_this13._hideTimeout);
-                            _this13.isShow() || _this13.show();
+                            _this12._hideTimeout && clearTimeout(_this12._hideTimeout);
+                            _this12.isShow() || _this12.show();
                         });
                         this._parent.addEventListener('mousemove', function () {
-                            _this13._hideTimeout && clearTimeout(_this13._hideTimeout);
-                            _this13.isShow() || _this13.show();
-                            if (!_this13._isPaused() && !_this13._mouseover && !_this13._mouseoverpreview) _this13._hideTimeout = setTimeout(_this13.hide.bind(_this13), _this13._args.autoHide);
+                            _this12._hideTimeout && clearTimeout(_this12._hideTimeout);
+                            _this12.isShow() || _this12.show();
+                            if (!_this12._isPaused() && !_this12._mouseover && !_this12._mouseoverpreview) _this12._hideTimeout = setTimeout(_this12.hide.bind(_this12), _this12._args.autoHide);
                         });
                         this._parent.addEventListener('mouseleave', function () {
-                            _this13._hideTimeout && clearTimeout(_this13._hideTimeout);
-                            if (!_this13._isPaused()) _this13.hide();
+                            _this12._hideTimeout && clearTimeout(_this12._hideTimeout);
+                            if (!_this12._isPaused()) _this12.hide();
                         });
                     };
 
@@ -866,8 +838,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return DashboardPatch;
     }(Patch);
 
-    var TopAreaPatch = function (_Patch7) {
-        _inherits(TopAreaPatch, _Patch7);
+    var TopAreaPatch = function (_Patch6) {
+        _inherits(TopAreaPatch, _Patch6);
 
         function TopAreaPatch() {
             _classCallCheck(this, TopAreaPatch);
@@ -905,8 +877,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return TopAreaPatch;
     }(Patch);
 
-    var SettingSeriesPatch = function (_Patch8) {
-        _inherits(SettingSeriesPatch, _Patch8);
+    var SettingSeriesPatch = function (_Patch7) {
+        _inherits(SettingSeriesPatch, _Patch7);
 
         function SettingSeriesPatch() {
             _classCallCheck(this, SettingSeriesPatch);
@@ -921,16 +893,16 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     // 网页全屏显示选集
                     var _addEvent = exports.default.prototype._addEvent;
                     exports.default.prototype._addEvent = function () {
-                        var _this16 = this;
+                        var _this15 = this;
 
                         _addEvent.apply(this);
                         this.on('webfullscreen', function (isWebFullscreen) {
                             if (isWebFullscreen) {
-                                if (_this16.seriesList.length > 1) _this16._el.style.display = 'inline-block';
+                                if (_this15.seriesList.length > 1) _this15._el.style.display = 'inline-block';
                             } else {
-                                _this16._el.style.display = 'none';
-                                _this16._el.classList.remove('cliced');
-                                _this16.emit('seriesliseLayer', false);
+                                _this15._el.style.display = 'none';
+                                _this15._el.classList.remove('cliced');
+                                _this15.emit('seriesliseLayer', false);
                             }
                         });
                     };
@@ -941,8 +913,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return SettingSeriesPatch;
     }(Patch);
 
-    var ContinuePlayPatch = function (_Patch9) {
-        _inherits(ContinuePlayPatch, _Patch9);
+    var ContinuePlayPatch = function (_Patch8) {
+        _inherits(ContinuePlayPatch, _Patch8);
 
         function ContinuePlayPatch() {
             _classCallCheck(this, ContinuePlayPatch);
@@ -953,13 +925,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         _createClass(ContinuePlayPatch, [{
             key: '_apply',
             value: function _apply() {
-                var _this18 = this;
+                var _this17 = this;
 
                 Hooker.hookInitPlayerEvent(function (that) {
                     // 视频播放结束处理
                     that._player.control.on('ended', that._onEnd.bind(that));
                     that._player.control.on('ended', function () {
-                        return _this18._onEnd(that);
+                        return _this17._onEnd(that);
                     });
                 });
             }
@@ -981,8 +953,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return ContinuePlayPatch;
     }(Patch);
 
-    var FullscreenPatch = function (_Patch10) {
-        _inherits(FullscreenPatch, _Patch10);
+    var FullscreenPatch = function (_Patch9) {
+        _inherits(FullscreenPatch, _Patch9);
 
         function FullscreenPatch() {
             _classCallCheck(this, FullscreenPatch);
@@ -1055,8 +1027,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return WebFullscreen;
     }();
 
-    var ManagePatch = function (_Patch11) {
-        _inherits(ManagePatch, _Patch11);
+    var ManagePatch = function (_Patch10) {
+        _inherits(ManagePatch, _Patch10);
 
         function ManagePatch() {
             _classCallCheck(this, ManagePatch);
@@ -1078,7 +1050,6 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 this._addPrevInfo();
                 this._playAfterPlayerReset();
                 new ContinuePlayPatch().install();
-                new SkipLocalPlayRecordPatch().install();
                 new FullscreenPatch().install();
             }
         }, {
@@ -1317,8 +1288,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
     var managePatch = new ManagePatch();
 
-    var KeyShortcutsPatch = function (_Patch12) {
-        _inherits(KeyShortcutsPatch, _Patch12);
+    var KeyShortcutsPatch = function (_Patch11) {
+        _inherits(KeyShortcutsPatch, _Patch11);
 
         function KeyShortcutsPatch() {
             _classCallCheck(this, KeyShortcutsPatch);
@@ -1488,8 +1459,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return KeyShortcutsPatch;
     }(Patch);
 
-    var MouseShortcutsPatch = function (_Patch13) {
-        _inherits(MouseShortcutsPatch, _Patch13);
+    var MouseShortcutsPatch = function (_Patch12) {
+        _inherits(MouseShortcutsPatch, _Patch12);
 
         function MouseShortcutsPatch() {
             _classCallCheck(this, MouseShortcutsPatch);
@@ -1557,8 +1528,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return MouseShortcutsPatch;
     }(Patch);
 
-    var ShortcutsPatch = function (_Patch14) {
-        _inherits(ShortcutsPatch, _Patch14);
+    var ShortcutsPatch = function (_Patch13) {
+        _inherits(ShortcutsPatch, _Patch13);
 
         function ShortcutsPatch() {
             _classCallCheck(this, ShortcutsPatch);
