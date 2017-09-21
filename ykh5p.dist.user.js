@@ -18,7 +18,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.11.1
+// @version      0.11.2
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -1568,7 +1568,9 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
     function ensureH5PlayerEnabled() {
         // (new H5Patch()).install();
-        unsafeWindow.navigator.plugins['Shockwave Flash'] = undefined;
+        Object.defineProperty(unsafeWindow.navigator, 'plugins', { get: function get() {
+                return {};
+            } });
         Logger.log('启用html5播放器');
     }
 
