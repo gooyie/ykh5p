@@ -10,6 +10,7 @@
 // @license      MIT License
 //
 // @include      *://v.youku.com/*
+// @include      *://player.youku.com/embed/*
 // @grant        GM_info
 // @grant        GM_addStyle
 // @grant        unsafeWindow
