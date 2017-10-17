@@ -18,12 +18,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.11.2
+// @version      0.12.0
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
 //
 // @include      *://v.youku.com/*
+// @include      *://player.youku.com/embed/*
 // @grant        GM_info
 // @grant        GM_addStyle
 // @grant        unsafeWindow
@@ -391,6 +392,26 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 this._hookModuleCall(cb, this._isSettingSeriesComponentModuleCall);
             }
         }, {
+            key: '_isSettingsIconComponentModuleCall',
+            value: function _isSettingsIconComponentModuleCall(exports) {
+                return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('setConfig');
+            }
+        }, {
+            key: 'hookSettingsIcon',
+            value: function hookSettingsIcon(cb) {
+                this._hookModuleCall(cb, this._isSettingsIconComponentModuleCall);
+            }
+        }, {
+            key: '_isUtilModuleCall',
+            value: function _isUtilModuleCall(exports) {
+                return exports.setLocalData && exports.getLocalData;
+            }
+        }, {
+            key: 'hookUtil',
+            value: function hookUtil(cb) {
+                this._hookModuleCall(cb, this._isUtilModuleCall);
+            }
+        }, {
             key: '_isGlobalModuleCall',
             value: function _isGlobalModuleCall(exports) {
                 return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('resetConfig');
@@ -445,17 +466,6 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     var reset = exports.default.prototype.reset;
                     exports.default.prototype.reset = function () {
                         reset.apply(this);
-                        cb(this);
-                    };
-                });
-            }
-        }, {
-            key: 'hookAdaptQualityAfter',
-            value: function hookAdaptQualityAfter(cb) {
-                Hooker.hookGlobal(function (exports) {
-                    var adaptQuality = exports.default.prototype.adaptQuality;
-                    exports.default.prototype.adaptQuality = function (lang) {
-                        adaptQuality.apply(this, [lang]);
                         cb(this);
                     };
                 });
@@ -683,19 +693,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         _createClass(QualityPatch, [{
             key: '_apply',
             value: function _apply() {
-                this._savePreferQuality();
                 this._improveAdaptQuality();
-            }
-        }, {
-            key: '_savePreferQuality',
-            value: function _savePreferQuality() {
-                // 选择的画质作为优先画质并保存至localStorage
-                Hooker.hookSetQuality(function (_ref, that) {
-                    var _ref2 = _slicedToArray(_ref, 1),
-                        quality = _ref2[0];
-
-                    return that.data.preferQuality = quality;
-                });
             }
         }, {
             key: '_findBestQuality',
@@ -709,14 +707,17 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }, {
             key: '_improveAdaptQuality',
             value: function _improveAdaptQuality() {
-                var _this9 = this;
-
-                Hooker.hookAdaptQualityAfter(function (that) {
-                    var cfg = that._config;
-                    if (cfg.quality !== cfg.preferQuality) {
-                        // 设置的优先画质在当前视频没有
-                        cfg.defaultQuality = cfg.quality = _this9._findBestQuality(that.qualityList) || cfg.quality;
-                    }
+                var self = this;
+                Hooker.hookGlobal(function (exports) {
+                    var adaptQuality = exports.default.prototype.adaptQuality;
+                    exports.default.prototype.adaptQuality = function (lang) {
+                        var cfg = this._config;
+                        var quality = cfg.quality;
+                        adaptQuality.apply(this, [lang]);
+                        if (!this.qualityList.includes(quality)) {
+                            cfg.quality = self._findBestQuality(this.qualityList);
+                        }
+                    };
                 });
             }
         }]);
@@ -761,10 +762,10 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         }, {
             key: '_exposeDashboard',
             value: function _exposeDashboard() {
-                var _this11 = this;
+                var _this10 = this;
 
                 Hooker.hookBase(function (code) {
-                    var varName = _this11._findVarName(code);
+                    var varName = _this10._findVarName(code);
                     return code.replace(/\.exports\s*=\s*(\w+)/, '$&;$1.__Dashboard=' + varName + ';');
                 }, 'code');
             }
@@ -775,38 +776,38 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     var proto = exports.__Dashboard.prototype;
 
                     proto.bindAutoHide = function () {
-                        var _this12 = this;
+                        var _this11 = this;
 
                         this._args.show = 'function' === typeof this._args.show ? this._args.show : function () {};
                         this._args.hide = 'function' === typeof this._args.hide ? this._args.show : function () {};
 
                         this._el.addEventListener('mouseover', function () {
-                            return _this12._mouseover = true;
+                            return _this11._mouseover = true;
                         });
                         this._el.addEventListener('mouseleave', function () {
-                            return _this12._mouseover = false;
+                            return _this11._mouseover = false;
                         });
                         this.on('mouseoverpreview', function () {
-                            return _this12._mouseoverpreview = true;
+                            return _this11._mouseoverpreview = true;
                         });
                         this.on('mouseleavepreview', function () {
-                            return _this12._mouseoverpreview = false;
+                            return _this11._mouseoverpreview = false;
                         });
                         this._video.on('play', function () {
-                            if (!_this12._mouseover && !_this12._mouseoverpreview) _this12._hideTimeout = setTimeout(_this12.hide.bind(_this12), _this12._args.autoHide);
+                            if (!_this11._mouseover && !_this11._mouseoverpreview) _this11._hideTimeout = setTimeout(_this11.hide.bind(_this11), _this11._args.autoHide);
                         });
                         this._video.on('pause', function () {
-                            _this12._hideTimeout && clearTimeout(_this12._hideTimeout);
-                            _this12.isShow() || _this12.show();
+                            _this11._hideTimeout && clearTimeout(_this11._hideTimeout);
+                            _this11.isShow() || _this11.show();
                         });
                         this._parent.addEventListener('mousemove', function () {
-                            _this12._hideTimeout && clearTimeout(_this12._hideTimeout);
-                            _this12.isShow() || _this12.show();
-                            if (!_this12._isPaused() && !_this12._mouseover && !_this12._mouseoverpreview) _this12._hideTimeout = setTimeout(_this12.hide.bind(_this12), _this12._args.autoHide);
+                            _this11._hideTimeout && clearTimeout(_this11._hideTimeout);
+                            _this11.isShow() || _this11.show();
+                            if (!_this11._isPaused() && !_this11._mouseover && !_this11._mouseoverpreview) _this11._hideTimeout = setTimeout(_this11.hide.bind(_this11), _this11._args.autoHide);
                         });
                         this._parent.addEventListener('mouseleave', function () {
-                            _this12._hideTimeout && clearTimeout(_this12._hideTimeout);
-                            if (!_this12._isPaused()) _this12.hide();
+                            _this11._hideTimeout && clearTimeout(_this11._hideTimeout);
+                            if (!_this11._isPaused()) _this11.hide();
                         });
                     };
 
@@ -893,16 +894,16 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     // 网页全屏显示选集
                     var _addEvent = exports.default.prototype._addEvent;
                     exports.default.prototype._addEvent = function () {
-                        var _this15 = this;
+                        var _this14 = this;
 
                         _addEvent.apply(this);
                         this.on('webfullscreen', function (isWebFullscreen) {
                             if (isWebFullscreen) {
-                                if (_this15.seriesList.length > 1) _this15._el.style.display = 'inline-block';
+                                if (_this14.seriesList.length > 1) _this14._el.style.display = 'inline-block';
                             } else {
-                                _this15._el.style.display = 'none';
-                                _this15._el.classList.remove('cliced');
-                                _this15.emit('seriesliseLayer', false);
+                                _this14._el.style.display = 'none';
+                                _this14._el.classList.remove('cliced');
+                                _this14.emit('seriesliseLayer', false);
                             }
                         });
                     };
@@ -925,13 +926,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         _createClass(ContinuePlayPatch, [{
             key: '_apply',
             value: function _apply() {
-                var _this17 = this;
+                var _this16 = this;
 
                 Hooker.hookInitPlayerEvent(function (that) {
                     // 视频播放结束处理
                     that._player.control.on('ended', that._onEnd.bind(that));
                     that._player.control.on('ended', function () {
-                        return _this17._onEnd(that);
+                        return _this16._onEnd(that);
                     });
                 });
             }
@@ -1049,6 +1050,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 this._disablePlayAfterSeek();
                 this._addPrevInfo();
                 this._playAfterPlayerReset();
+                this._keepPlaybackRate();
+                this._playbackRatePersistence();
                 new ContinuePlayPatch().install();
                 new FullscreenPatch().install();
             }
@@ -1077,6 +1080,49 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         this.video.play = function () {};
                         _setCurrentTime.apply(this, [time]);
                         this.video.play = play;
+                    };
+                });
+            }
+        }, {
+            key: '_keepPlaybackRate',
+            value: function _keepPlaybackRate() {
+                Hooker.hookBase(function (exports) {
+                    var proto = exports.MultiVideoControl.prototype;
+                    var _setVideo = proto._setVideo;
+                    proto._setVideo = function () {
+                        var rate = this.video.playbackRate;
+
+                        for (var _len9 = arguments.length, args = Array(_len9), _key9 = 0; _key9 < _len9; _key9++) {
+                            args[_key9] = arguments[_key9];
+                        }
+
+                        _setVideo.apply(this, args);
+                        this.video.playbackRate = rate;
+                    };
+                });
+            }
+        }, {
+            key: '_playbackRatePersistence',
+            value: function _playbackRatePersistence() {
+                var util = void 0;
+                Hooker.hookUtil(function (exports) {
+                    return util = exports;
+                });
+                Hooker.hookSettingsIcon(function (exports) {
+                    var proto = exports.default.prototype;
+                    var setDataUI = proto.setDataUI;
+                    proto.setDataUI = function (data) {
+                        var _this19 = this;
+
+                        setDataUI.apply(this, [data]);
+                        this._video.global.playerState = {
+                            playbackRate: data.playbackRate || 1,
+                            normalPlaybackRate: true
+                        };
+                        this.on('playbackratechange', function (rate) {
+                            _this19.data.playbackRate = rate;
+                            util.setLocalData('YK_PSL_SETTINGS', _this19.data);
+                        });
                     };
                 });
             }
@@ -1206,21 +1252,29 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 };
 
                 proto.adjustPlaybackRate = function (value) {
-                    var videoCore = this._player.control._videoCore;
-                    var rate = Math.max(0.2, Math.min(5, videoCore.video.playbackRate + value));
-                    if (this._player.config.controlType === 'multi') {
+                    var player = this._player;
+                    var control = player.control;
+                    var videoCore = control._videoCore;
+                    var video = videoCore.video;
+                    var rate = Math.max(0.2, Math.min(5, parseFloat((video.playbackRate + value).toFixed(1))));
+                    if (player.config.controlType === 'multi') {
                         videoCore._videoElments.forEach(function (v) {
                             return v.playbackRate = rate;
                         });
                     } else {
-                        videoCore.video.playbackRate = rate;
+                        video.playbackRate = rate;
                     }
-                    this._showTip('\u64AD\u653E\u901F\u7387\uFF1A' + rate.toFixed(1).replace(/\.0+$/, ''));
+                    this.global.playerState = { playbackRate: rate };
+                    control.emit('playbackratechange', rate);
+                    this._showTip('\u64AD\u653E\u901F\u7387\uFF1A' + rate);
                 };
 
-                proto.resetPlaybackRate = function () {
-                    this._player.control.setRate(1);
-                    this._showTip('恢复播放速率');
+                proto.turnPlaybackRate = function () {
+                    var state = this.global.playerState;
+                    var rate = state.normalPlaybackRate ? state.playbackRate : 1;
+                    state.normalPlaybackRate = !state.normalPlaybackRate;
+                    this._player.control.setRate(rate);
+                    this._showTip('\u64AD\u653E\u901F\u7387\uFF1A' + rate);
                 };
 
                 proto.getFps = function () {
@@ -1403,7 +1457,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     case 90:
                         // Z
                         if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
-                            this._player.resetPlaybackRate();
+                            this._player.turnPlaybackRate();
                         } else {
                             return;
                         }
