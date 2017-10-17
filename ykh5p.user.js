@@ -324,16 +324,6 @@
             });
         }
 
-        static hookAdaptQualityAfter(cb) {
-            Hooker.hookGlobal((exports) => {
-                const adaptQuality = exports.default.prototype.adaptQuality;
-                exports.default.prototype.adaptQuality = function(lang) {
-                    adaptQuality.apply(this, [lang]);
-                    cb(this);
-                };
-            });
-        }
-
         static _extractArgsName(code) {
             return code.slice(code.indexOf('(') + 1, code.indexOf(')')).split(/\s*,\s*/);
         }
@@ -497,12 +487,7 @@
         }
 
         _apply() {
-            this._savePreferQuality();
             this._improveAdaptQuality();
-        }
-
-        _savePreferQuality() { // 选择的画质作为优先画质并保存至localStorage
-            Hooker.hookSetQuality(([quality], that) => that.data.preferQuality = quality);
         }
 
         _findBestQuality(qualityList) {
@@ -510,11 +495,17 @@
         }
 
         _improveAdaptQuality() {
-            Hooker.hookAdaptQualityAfter((that) => {
-                const cfg = that._config;
-                if (cfg.quality !== cfg.preferQuality) { // 设置的优先画质在当前视频没有
-                    cfg.defaultQuality = cfg.quality = this._findBestQuality(that.qualityList) || cfg.quality;
-                }
+            const self = this;
+            Hooker.hookGlobal((exports) => {
+                const adaptQuality = exports.default.prototype.adaptQuality;
+                exports.default.prototype.adaptQuality = function(lang) {
+                    const cfg = this._config;
+                    const quality = cfg.quality;
+                    adaptQuality.apply(this, [lang]);
+                    if (!this.qualityList.includes(quality)) {
+                        cfg.quality = self._findBestQuality(this.qualityList);
+                    }
+                };
             });
         }
 
