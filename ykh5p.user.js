@@ -781,6 +781,7 @@
             this._disablePlayAfterSeek();
             this._addPrevInfo();
             this._playAfterPlayerReset();
+            this._keepPlaybackRate();
             (new ContinuePlayPatch()).install();
             (new FullscreenPatch()).install();
         }
@@ -806,6 +807,18 @@
                     this.video.play = () => {};
                     _setCurrentTime.apply(this, [time]);
                     this.video.play = play;
+                };
+            });
+        }
+
+        _keepPlaybackRate() {
+            Hooker.hookBase((exports) => {
+                const proto = exports.MultiVideoControl.prototype;
+                const _setVideo = proto._setVideo;
+                proto._setVideo = function(...args) {
+                    const rate = this.video.playbackRate;
+                    _setVideo.apply(this, args);
+                    this.video.playbackRate = rate;
                 };
             });
         }
