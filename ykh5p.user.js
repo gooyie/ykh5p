@@ -274,6 +274,23 @@
             this._hookModuleCall(cb, this._isSettingSeriesComponentModuleCall);
         }
 
+        static _isSettingsIconComponentModuleCall(exports) {
+            return this._isEsModule(exports) && this._isFuction(exports.default) &&
+                   exports.default.prototype && exports.default.prototype.hasOwnProperty('setConfig');
+        }
+
+        static hookSettingsIcon(cb) {
+            this._hookModuleCall(cb, this._isSettingsIconComponentModuleCall);
+        }
+
+        static _isUtilModuleCall(exports) {
+            return exports.setLocalData && exports.getLocalData;
+        }
+
+        static hookUtil(cb) {
+            this._hookModuleCall(cb, this._isUtilModuleCall);
+        }
+
         static _isGlobalModuleCall(exports) {
             return this._isEsModule(exports) && this._isFuction(exports.default) &&
                    exports.default.prototype && exports.default.prototype.hasOwnProperty('resetConfig');
@@ -773,6 +790,7 @@
             this._addPrevInfo();
             this._playAfterPlayerReset();
             this._keepPlaybackRate();
+            this._playbackRatePersistence();
             (new ContinuePlayPatch()).install();
             (new FullscreenPatch()).install();
         }
@@ -810,6 +828,26 @@
                     const rate = this.video.playbackRate;
                     _setVideo.apply(this, args);
                     this.video.playbackRate = rate;
+                };
+            });
+        }
+
+        _playbackRatePersistence() {
+            let util;
+            Hooker.hookUtil(exports => util = exports);
+            Hooker.hookSettingsIcon((exports) => {
+                const proto = exports.default.prototype;
+                const setDataUI = proto.setDataUI;
+                proto.setDataUI = function(data) {
+                    setDataUI.apply(this, [data]);
+                    this._video.global.playerState = {
+                        playbackRate: data.playbackRate || 1,
+                        normalPlaybackRate: true
+                    };
+                    this.on('playbackratechange', (rate) => {
+                        this.data.playbackRate = rate;
+                        util.setLocalData('YK_PSL_SETTINGS', this.data);
+                    });
                 };
             });
         }
@@ -933,19 +971,27 @@
             };
 
             proto.adjustPlaybackRate = function(value) {
-                const videoCore = this._player.control._videoCore;
-                const rate = Math.max(0.2, Math.min(5, videoCore.video.playbackRate + value));
-                if (this._player.config.controlType === 'multi') {
+                const player = this._player;
+                const control = player.control;
+                const videoCore = control._videoCore;
+                const video = videoCore.video;
+                const rate = Math.max(0.2, Math.min(5, parseFloat((video.playbackRate + value).toFixed(1))));
+                if (player.config.controlType === 'multi') {
                     videoCore._videoElments.forEach(v => v.playbackRate = rate);
                 } else {
-                    videoCore.video.playbackRate = rate;
+                    video.playbackRate = rate;
                 }
-                this._showTip(`播放速率：${rate.toFixed(1).replace(/\.0+$/, '')}`);
+                this.global.playerState = {playbackRate: rate};
+                control.emit('playbackratechange', rate);
+                this._showTip(`播放速率：${rate}`);
             };
 
-            proto.resetPlaybackRate = function() {
-                this._player.control.setRate(1);
-                this._showTip('恢复播放速率');
+            proto.turnPlaybackRate = function() {
+                const state = this.global.playerState;
+                const rate = state.normalPlaybackRate ? state.playbackRate : 1;
+                state.normalPlaybackRate = !state.normalPlaybackRate;
+                this._player.control.setRate(rate);
+                this._showTip(`播放速率：${rate}`);
             };
 
             proto.getFps = function() {
@@ -1109,7 +1155,7 @@
                 break;
             case 90: // Z
                 if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
-                    this._player.resetPlaybackRate();
+                    this._player.turnPlaybackRate();
                 } else {
                     return;
                 }
