@@ -4,7 +4,7 @@
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.12.1
+// @version      0.12.2
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -456,6 +456,7 @@
                     }, 0);
                 };
             });
+            this._hideOppoAds();
         }
 
         _fakeFrontAdData() {
@@ -463,6 +464,14 @@
                 VAL: [],
             };
             return data;
+        }
+
+        _hideOppoAds() {
+            GM_addStyle(`
+                .oppo-ads, .oppinfo {
+                    display: none !important;
+                }
+            `);
         }
 
     }
