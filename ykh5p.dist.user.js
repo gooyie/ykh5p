@@ -18,7 +18,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.12.0
+// @version      0.12.1
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -1115,10 +1115,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         var _this19 = this;
 
                         setDataUI.apply(this, [data]);
-                        this._video.global.playerState = {
-                            playbackRate: data.playbackRate || 1,
-                            normalPlaybackRate: true
-                        };
+                        this._video.global.playerState = { playbackRate: data.playbackRate || 1 };
                         this.on('playbackratechange', function (rate) {
                             _this19.data.playbackRate = rate;
                             util.setLocalData('YK_PSL_SETTINGS', _this19.data);
@@ -1251,29 +1248,31 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     this.isWebFullscreen() ? this.exitWebFullscreen() : this.enterWebFullscreen();
                 };
 
-                proto.adjustPlaybackRate = function (value) {
-                    var player = this._player;
-                    var control = player.control;
-                    var videoCore = control._videoCore;
+                proto.setRate = function (rate) {
+                    var videoCore = this._player.control._videoCore;
                     var video = videoCore.video;
-                    var rate = Math.max(0.2, Math.min(5, parseFloat((video.playbackRate + value).toFixed(1))));
-                    if (player.config.controlType === 'multi') {
+                    if (this._player.config.controlType === 'multi') {
                         videoCore._videoElments.forEach(function (v) {
                             return v.playbackRate = rate;
                         });
                     } else {
                         video.playbackRate = rate;
                     }
+                };
+
+                proto.adjustPlaybackRate = function (value) {
+                    var video = this._player.control._videoCore.video;
+                    var rate = Math.max(0.2, Math.min(5, parseFloat((video.playbackRate + value).toFixed(1))));
+                    this.setRate(rate);
                     this.global.playerState = { playbackRate: rate };
-                    control.emit('playbackratechange', rate);
+                    this._player.control.emit('playbackratechange', rate);
                     this._showTip('\u64AD\u653E\u901F\u7387\uFF1A' + rate);
                 };
 
                 proto.turnPlaybackRate = function () {
-                    var state = this.global.playerState;
-                    var rate = state.normalPlaybackRate ? state.playbackRate : 1;
-                    state.normalPlaybackRate = !state.normalPlaybackRate;
-                    this._player.control.setRate(rate);
+                    var video = this._player.control._videoCore.video;
+                    var rate = video.playbackRate !== 1 ? 1 : this.global.playerState.playbackRate;
+                    this.setRate(rate);
                     this._showTip('\u64AD\u653E\u901F\u7387\uFF1A' + rate);
                 };
 
