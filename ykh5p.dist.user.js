@@ -18,7 +18,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.12.2
+// @version      0.12.3
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -400,6 +400,16 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             key: 'hookSettingsIcon',
             value: function hookSettingsIcon(cb) {
                 this._hookModuleCall(cb, this._isSettingsIconComponentModuleCall);
+            }
+        }, {
+            key: '_isTriggerLayerComponentModuleCall',
+            value: function _isTriggerLayerComponentModuleCall(exports) {
+                return this._isEsModule(exports) && this._isFuction(exports.default) && exports.default.prototype && exports.default.prototype.hasOwnProperty('showMenu');
+            }
+        }, {
+            key: 'hookTriggerLayer',
+            value: function hookTriggerLayer(cb) {
+                this._hookModuleCall(cb, this._isTriggerLayerComponentModuleCall);
             }
         }, {
             key: '_isUtilModuleCall',
@@ -995,28 +1005,26 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             key: 'enter',
             value: function enter() {
                 this._elem.classList.add('webfullscreen');
-                document.body.style.overflow = 'hidden';
+                var body = document.body;
+                body.style.overflow = 'hidden';
 
-                var parentNode = this._elem.parentNode;
-                while (parentNode.nodeName !== 'BODY') {
-                    if (parentNode.nodeType === Node.ELEMENT_NODE) {
-                        parentNode.classList.add('z-top');
-                    }
-                    parentNode = parentNode.parentNode;
+                var parentElement = this._elem.parentElement;
+                while (parentElement && parentElement !== body) {
+                    parentElement.classList.add('z-top');
+                    parentElement = parentElement.parentElement;
                 }
             }
         }, {
             key: 'exit',
             value: function exit() {
                 this._elem.classList.remove('webfullscreen');
-                document.body.style.overflow = '';
+                var body = document.body;
+                body.style.overflow = '';
 
-                var parentNode = this._elem.parentNode;
-                while (parentNode.nodeName !== 'BODY') {
-                    if (parentNode.nodeType === Node.ELEMENT_NODE) {
-                        parentNode.classList.remove('z-top');
-                    }
-                    parentNode = parentNode.parentNode;
+                var parentElement = this._elem.parentElement;
+                while (parentElement && parentElement !== body) {
+                    parentElement.classList.remove('z-top');
+                    parentElement = parentElement.parentElement;
                 }
             }
         }, {
@@ -1531,55 +1539,40 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             key: '_apply',
             value: function _apply() {
                 this._prepare();
-                this._addListener();
+                this._initEvents();
             }
         }, {
             key: '_prepare',
             value: function _prepare() {
                 managePatch.install();
-                this._addStyle();
             }
         }, {
-            key: '_addStyle',
-            value: function _addStyle() {
-                GM_addStyle('\n                .h5-layer-conatiner {\n                    -webkit-user-select: none !important;\n                    -moz-user-select: none !important;\n                    -ms-user-select: none !important;\n                    user-select: none !important;\n                }\n                .h5-ext-layer-adsdk {\n                    display: none !important;\n                }\n            ');
-            }
-        }, {
-            key: '_addListener',
-            value: function _addListener() {
-                Hooker.hookInitPlayerEvent(function (that) {
-                    var timer = void 0;
-                    var container = that.container.querySelector('.h5-layer-conatiner');
-                    container.addEventListener('click', function (event) {
-                        if (this !== event.target) return;
-                        if (timer) {
-                            clearTimeout(timer);
-                            timer = null;
-                            return;
-                        }
-                        timer = setTimeout(function () {
-                            var state = that.global.playerState.state;
-                            if (state === 'paused') {
-                                that.play();
-                            } else if (state === 'ended') {
-                                that.replay();
-                            } else {
-                                that.pause();
+            key: '_initEvents',
+            value: function _initEvents() {
+                Hooker.hookTriggerLayer(function (exports) {
+                    var proto = exports.default.prototype;
+                    var initEvents = proto.initEvents;
+                    proto.initEvents = function () {
+                        var _this22 = this;
+
+                        var player = this._video.ykplayer;
+
+                        this._el.addEventListener('dblclick', function (event) {
+                            if (event.ctrlKey) {
+                                player.toggleWebFullscreen();
+                                event.stopImmediatePropagation();
+                                _this22._clickTimer.clear();
                             }
-                            timer = null;
-                        }, 200);
-                    });
-                    container.addEventListener('dblclick', function (event) {
-                        if (this !== event.target) return;
-                        event.ctrlKey ? that.toggleWebFullscreen() : that.toggleFullscreen();
-                    });
-                    container.addEventListener('wheel', function (event) {
-                        if (this === event.target && (that.isFullscreen() || that.isWebFullscreen())) {
-                            var delta = event.wheelDelta || event.detail || event.deltaY && -event.deltaY;
-                            that.adjustVolume(delta > 0 ? 0.05 : -0.05);
-                        }
-                    });
-                    container = null;
+                        });
+                        this._el.addEventListener('wheel', function (event) {
+                            if (player.isFullscreen() || player.isWebFullscreen()) {
+                                var delta = event.wheelDelta || event.detail || event.deltaY && -event.deltaY;
+                                player.adjustVolume(delta > 0 ? 0.05 : -0.05);
+                            }
+                        });
+
+                        initEvents.apply(this);
+                    };
                 });
             }
         }]);
