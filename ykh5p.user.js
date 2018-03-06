@@ -283,6 +283,15 @@
             this._hookModuleCall(cb, this._isSettingsIconComponentModuleCall);
         }
 
+        static _isTriggerLayerComponentModuleCall(exports) {
+            return this._isEsModule(exports) && this._isFuction(exports.default) &&
+                   exports.default.prototype && exports.default.prototype.hasOwnProperty('showMenu');
+        }
+
+        static hookTriggerLayer(cb) {
+            this._hookModuleCall(cb, this._isTriggerLayerComponentModuleCall);
+        }
+
         static _isUtilModuleCall(exports) {
             return exports.setLocalData && exports.getLocalData;
         }
@@ -1220,62 +1229,36 @@
 
         _apply() {
             this._prepare();
-            this._addListener();
+            this._initEvents();
         }
 
         _prepare() {
             managePatch.install();
-            this._addStyle();
         }
 
-        _addStyle() {
-            GM_addStyle(`
-                .h5-layer-conatiner {
-                    -webkit-user-select: none !important;
-                    -moz-user-select: none !important;
-                    -ms-user-select: none !important;
-                    user-select: none !important;
-                }
-                .h5-ext-layer-adsdk {
-                    display: none !important;
-                }
-            `);
-        }
+        _initEvents() {
+            Hooker.hookTriggerLayer((exports) => {
+                const proto = exports.default.prototype;
+                const initEvents = proto.initEvents;
+                proto.initEvents = function() {
+                    const player = this._video.ykplayer;
 
-        _addListener() {
-            Hooker.hookInitPlayerEvent((that) => {
-                let timer;
-                let container = that.container.querySelector('.h5-layer-conatiner');
-                container.addEventListener('click', function(event) {
-                    if (this !== event.target) return;
-                    if (timer) {
-                        clearTimeout(timer);
-                        timer = null;
-                        return;
-                    }
-                    timer = setTimeout(() => {
-                        const state = that.global.playerState.state;
-                        if (state  === 'paused') {
-                            that.play();
-                        } else if (state === 'ended') {
-                            that.replay();
-                        } else {
-                            that.pause();
+                    this._el.addEventListener('dblclick', (event) => {
+                        if (event.ctrlKey) {
+                            player.toggleWebFullscreen();
+                            event.stopImmediatePropagation();
+                            this._clickTimer.clear();
                         }
-                        timer = null;
-                    }, 200);
-                });
-                container.addEventListener('dblclick', function(event) {
-                    if (this !== event.target) return;
-                    event.ctrlKey ? that.toggleWebFullscreen() : that.toggleFullscreen();
-                });
-                container.addEventListener('wheel', function(event) {
-                    if (this === event.target && (that.isFullscreen() || that.isWebFullscreen())) {
-                        const delta = event.wheelDelta || event.detail || (event.deltaY && -event.deltaY);
-                        that.adjustVolume(delta > 0 ? 0.05 : -0.05);
-                    }
-                });
-                container = null;
+                    });
+                    this._el.addEventListener('wheel', (event) => {
+                        if (player.isFullscreen() || player.isWebFullscreen()) {
+                            const delta = event.wheelDelta || event.detail || (event.deltaY && -event.deltaY);
+                            player.adjustVolume(delta > 0 ? 0.05 : -0.05);
+                        }
+                    });
+
+                    initEvents.apply(this);
+                };
             });
         }
 
