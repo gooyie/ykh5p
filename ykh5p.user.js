@@ -734,27 +734,25 @@
 
         enter() {
             this._elem.classList.add('webfullscreen');
-            document.body.style.overflow = 'hidden';
+            const body = document.body;
+            body.style.overflow = 'hidden';
 
-            let parentNode = this._elem.parentNode;
-            while (parentNode.nodeName !== 'BODY') {
-                if (parentNode.nodeType === Node.ELEMENT_NODE) {
-                    parentNode.classList.add('z-top');
-                }
-                parentNode = parentNode.parentNode;
+            let parentElement = this._elem.parentElement;
+            while (parentElement && parentElement !== body) {
+                parentElement.classList.add('z-top');
+                parentElement = parentElement.parentElement;
             }
         }
 
         exit() {
             this._elem.classList.remove('webfullscreen');
-            document.body.style.overflow = '';
+            const body = document.body;
+            body.style.overflow = '';
 
-            let parentNode = this._elem.parentNode;
-            while (parentNode.nodeName !== 'BODY') {
-                if (parentNode.nodeType === Node.ELEMENT_NODE) {
-                    parentNode.classList.remove('z-top');
-                }
-                parentNode = parentNode.parentNode;
+            let parentElement = this._elem.parentElement;
+            while (parentElement && parentElement !== body) {
+                parentElement.classList.remove('z-top');
+                parentElement = parentElement.parentElement;
             }
         }
 
