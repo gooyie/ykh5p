@@ -4,7 +4,7 @@
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.12.3
+// @version      0.12.4
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -381,25 +381,31 @@
             this.hookBase = (cb, mode) => (mode === 'code' ? codeCallbacks : callbacks).push(cb);
         }
 
-        static hookOz(cb) {
-            const callbacks = [cb];
+        static hookGlobalVariable(name, cb) {
             const window = unsafeWindow;
-            let oz = window.oz; // oz 可能先于脚本执行
-            Object.defineProperty(window, 'oz', {
+
+            let value = window[name];
+            Object.defineProperty(window, name, {
                 get: () => {
-                    return oz;
+                    return value;
                 },
-                set: (value) => {
-                    oz = value;
+                set: (v) => {
                     try {
-                        callbacks.forEach(cb => cb(oz));
+                        const ret = cb(v);
+                        value = ret === undefined ? v : ret;
                     } catch (err) {
                         Logger.error(err.stack);
                     }
-                }
+                },
             });
-            if (oz) window.oz = oz; // oz 先于脚本执行
+            if (value) window[name] = value;
+        }
 
+        static hookOz(cb) {
+            const callbacks = [cb];
+            this.hookGlobalVariable('oz', (oz) => {
+                callbacks.forEach(cb => cb(oz));
+            });
             this.hookOz = (cb) => callbacks.push(cb);
         }
 
@@ -1279,6 +1285,19 @@
 
     }
 
+    class TVBH5Patch extends Patch {
+
+        constructor() {
+            super();
+        }
+
+        _apply() {
+            Hooker.hookGlobalVariable('PageConfig', (cfg) => {cfg.production = '';});
+            Logger.log(`H5-player has been enabled at TVB's videos.`);
+        }
+
+    }
+
     // class H5Patch extends Patch {
 
         // constructor() {
@@ -1332,6 +1351,10 @@
         (new ShortcutsPatch()).install();
     }
 
+    function enableH5ForTVB() {
+        (new TVBH5Patch()).install();
+    }
+
 //=============================================================================
 
     ensureH5PlayerEnabled();
@@ -1341,5 +1364,6 @@
     improveQualityLogic();
     improveAutoHide();
     improveShortcuts();
+    enableH5ForTVB();
 
 })();

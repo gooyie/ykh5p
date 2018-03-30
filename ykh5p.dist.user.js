@@ -18,7 +18,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.12.3
+// @version      0.12.4
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -524,28 +524,35 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 };
             }
         }, {
-            key: 'hookOz',
-            value: function hookOz(cb) {
-                var callbacks = [cb];
+            key: 'hookGlobalVariable',
+            value: function hookGlobalVariable(name, cb) {
                 var window = unsafeWindow;
-                var oz = window.oz; // oz 可能先于脚本执行
-                Object.defineProperty(window, 'oz', {
+
+                var value = window[name];
+                Object.defineProperty(window, name, {
                     get: function get() {
-                        return oz;
+                        return value;
                     },
-                    set: function set(value) {
-                        oz = value;
+                    set: function set(v) {
                         try {
-                            callbacks.forEach(function (cb) {
-                                return cb(oz);
-                            });
+                            var ret = cb(v);
+                            value = ret === undefined ? v : ret;
                         } catch (err) {
                             Logger.error(err.stack);
                         }
                     }
                 });
-                if (oz) window.oz = oz; // oz 先于脚本执行
-
+                if (value) window[name] = value;
+            }
+        }, {
+            key: 'hookOz',
+            value: function hookOz(cb) {
+                var callbacks = [cb];
+                this.hookGlobalVariable('oz', function (oz) {
+                    callbacks.forEach(function (cb) {
+                        return cb(oz);
+                    });
+                });
                 this.hookOz = function (cb) {
                     return callbacks.push(cb);
                 };
@@ -1602,6 +1609,28 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         return ShortcutsPatch;
     }(Patch);
 
+    var TVBH5Patch = function (_Patch14) {
+        _inherits(TVBH5Patch, _Patch14);
+
+        function TVBH5Patch() {
+            _classCallCheck(this, TVBH5Patch);
+
+            return _possibleConstructorReturn(this, (TVBH5Patch.__proto__ || Object.getPrototypeOf(TVBH5Patch)).call(this));
+        }
+
+        _createClass(TVBH5Patch, [{
+            key: '_apply',
+            value: function _apply() {
+                Hooker.hookGlobalVariable('PageConfig', function (cfg) {
+                    cfg.production = '';
+                });
+                Logger.log('H5-player has been enabled at TVB\'s videos.');
+            }
+        }]);
+
+        return TVBH5Patch;
+    }(Patch);
+
     // class H5Patch extends Patch {
 
     // constructor() {
@@ -1657,6 +1686,10 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
         new ShortcutsPatch().install();
     }
 
+    function enableH5ForTVB() {
+        new TVBH5Patch().install();
+    }
+
     //=============================================================================
 
     ensureH5PlayerEnabled();
@@ -1666,4 +1699,5 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
     improveQualityLogic();
     improveAutoHide();
     improveShortcuts();
+    enableH5ForTVB();
 })();
