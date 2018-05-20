@@ -18,7 +18,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // @homepageURL  https://github.com/gooyie/ykh5p
 // @supportURL   https://github.com/gooyie/ykh5p/issues
 // @updateURL    https://raw.githubusercontent.com/gooyie/ykh5p/master/ykh5p.user.js
-// @version      0.12.4
+// @version      0.12.5
 // @description  改善优酷官方html5播放器播放体验
 // @author       gooyie
 // @license      MIT License
@@ -1622,7 +1622,9 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             key: '_apply',
             value: function _apply() {
                 Hooker.hookGlobalVariable('PageConfig', function (cfg) {
-                    cfg.production = '';
+                    Object.defineProperty(cfg, 'production', { get: function get() {
+                            return '';
+                        } });
                 });
                 Logger.log('H5-player has been enabled at TVB\'s videos.');
             }
